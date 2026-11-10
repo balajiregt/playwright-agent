@@ -26,8 +26,5 @@
     "testId": "active-user",
     "text": "Vik Viewer \u00b7 viewer"
   },
-  "analysis": {
-    "scope": "synthetic"
-  },
   "captureEvidence": true
 }

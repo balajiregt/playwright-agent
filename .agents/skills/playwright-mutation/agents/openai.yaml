@@ -1,0 +1,6 @@
+interface:
+  display_name: "Playwright Mutation"
+  short_description: "Verify requested faults against existing tests"
+  default_prompt: "Use $playwright-mutation to verify the selected reviewed application faults against unchanged Playwright tests."
+policy:
+  allow_implicit_invocation: false

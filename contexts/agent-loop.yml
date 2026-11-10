@@ -1,134 +1,59 @@
 name: "agent-loop"
-version: 1
-purpose: "MCP-optional planner-generator-healer-reviewer loop for Playwright agent and CLI work."
-
+version: 2
+purpose: "Prompt intent selects a focused functional task before tool selection."
 states:
+  task_router:
+    inputs: ["user request and exclusions", "selected project instructions"]
+    guide: ".agents/skills/playwright-agent/SKILL.md"
+    routes:
+      authoring:
+        skill: ".agents/skills/playwright-test-authoring/SKILL.md"
+        when: "Requested create/edit/fix/refactor/run work; run-only does not authorize edits."
+        sequence: ["relevant context", "inspect source and nearby tests", "requested changes", "focused checks", "findings and viewer"]
+      assessment:
+        skill: ".agents/skills/playwright-assessment/SKILL.md"
+        when: "Explicit coverage, acceptance, matrix, gaps or duplicate assessment."
+        sequence: ["requirements", "actual assertions", "requested findings or matrix", "report viewer"]
+        execution: "Only when requested; no automatic edits or mutations."
+      mutation:
+        skill: ".agents/skills/playwright-mutation/SKILL.md"
+        when: "Explicit mutation or executed application-fault verification."
+        sequence: ["reviewed fault plan", "frozen tests", "healthy baselines", "one isolated fault", "activation probe", "repeat execution", "restore green", "report viewer"]
+    combinations:
+      assess_and_fix: ["assessment", "authoring"]
+      create_and_mutate: ["authoring", "mutation"]
   mode_router:
-    goal: "Decide whether the current prompt can use MCP-enabled Playwright Agents or should use the no-MCP CLI capture path."
-    inputs:
-      - "user prompt"
-      - "available tool access"
-      - "organization policy"
-      - "contexts/command-map.yml"
-      - "contexts/capture-map.yml"
-    outputs:
-      - "selected mode: mcp_agents or cli_evidence"
-      - "reason for the selected mode"
-    stop_when:
-      - "The agent knows whether to use official Playwright Agents with MCP or capture workflows with playwright-cli evidence."
-    transitions:
-      mcp_agents:
-        - "Use official Playwright planner/generator/healer capabilities when available."
-        - "Keep all generated work inside this harness's fixture, page object, assertion, tag, evidence, and review rules."
-        - "Verify with project-local npx playwright test commands."
-      cli_evidence:
-        - "Use capture workflows or direct playwright-cli commands to collect missing page context."
-        - "Use curated YAML captures and screenshots as reusable local evidence."
-        - "Verify with project-local npx playwright test commands."
+    goal: "Select available MCP or CLI evidence tools inside the authorized task."
+    guide: "docs/agent-workflow.md#prompt-mode-router"
   scope_router:
-    goal: "Decide whether the prompt is a small owning-layer change or a new flow that needs a spec first."
-    inputs:
-      - "user prompt"
-      - "existing specs and tests"
-      - "changed or requested framework layer"
-      - "contexts/flow-graph.yml"
-    outputs:
-      - "selected path: direct_update or spec_first"
-      - "reason for selected path"
-    stop_when:
-      - "Small changes go directly to the owning layer; new role or business flows go through a concrete flow spec."
+    goal: "Choose a direct owning-layer update or a spec for a broad new flow."
+    guide: "contexts/flow-graph.yml"
   source_analyzer:
-    goal: "Use app source and manifests to identify possible UI test coverage before generation."
-    inputs:
-      - "user prompt"
-      - "contexts/source-map.yml"
-      - "available application source or source-manifest.json"
-      - "existing tests, specs, pages, assertions, and captures"
-    outputs:
-      - "graphs/data/source-graph.json"
-      - "candidate routes, roles, actions, fields, states, and possible tests"
-    stop_when:
-      - "The agent can explain which source-discovered flows are covered, missing, or ambiguous."
+    goal: "Inspect relevant source; refresh manifests only for requested discovery or broad flow planning."
+    guide: "contexts/source-map.yml"
   coverage_reviewer:
-    goal: "Compare source-discovered possible tests with existing test and capture coverage."
-    inputs:
-      - "graphs/data/source-graph.json"
-      - "graphs/data/test-graph.json"
-      - "contexts/coverage-map.yml"
-      - "contexts/duplication-rules.yml"
-    outputs:
-      - "graphs/data/coverage-graph.json"
-      - "graphs/data/duplicates.json"
-      - "graphs/index.html"
-    stop_when:
-      - "Coverage gaps and duplicate risks are available for planning and review."
+    goal: "Review actual assertion evidence for an explicitly requested assessment."
+    guide: ".agents/skills/playwright-assessment/SKILL.md"
   capture:
-    goal: "Use capture workflows or direct playwright-cli commands to create reusable local page context before test generation."
-    inputs:
-      - "user prompt"
-      - "contexts/app-under-test.yml"
-      - "contexts/capture-map.yml"
-      - "existing contexts/captures files"
-    outputs:
-      - "contexts/captures/*.yml"
-      - "optional contexts/captures/*.png"
-    stop_when:
-      - "The agent has current YAML snapshots for the pages, states, and post-action views needed by the flow."
+    goal: "Collect only missing/stale page evidence needed by the selected task."
+    guide: "contexts/capture-map.yml"
   planner:
-    goal: "Convert new role flows, business workflows, broad coverage requests, or unclear prompts into precise flow specs."
-    inputs:
-      - "user prompt"
-      - "contexts/captures/*.yml"
-      - "contexts/app-under-test.yml"
-      - "contexts/test-strategy.yml"
-      - "existing specs and tests"
-    outputs:
-      - "specs/*.md"
-    stop_when:
-      - "Flow, role, data, tags, steps, expected results, and evidence needs are explicit."
+    goal: "Specify broad new authoring flows when necessary; small edits need no new spec."
+    guide: "contexts/flow-graph.yml"
   generator:
-    goal: "Create or update executable Playwright tests using framework layers."
-    inputs:
-      - "specs/*.md"
-      - "contexts/flow-graph.yml"
-      - "fixtures, pages, assertions, and data"
-    outputs:
-      - "tests/*.spec.ts"
-      - "supporting fixture/page/assertion/data updates"
-    stop_when:
-      - "The generated test follows layering, locator, auth, and tagging rules."
+    goal: "Make requested test changes using existing framework layers."
+    guide: ".agents/skills/playwright-test-authoring/SKILL.md"
   healer:
-    goal: "Use MCP evidence when available, or capture and test-runner evidence when MCP is blocked, to repair failing tests."
-    inputs:
-      - "focused Playwright command"
-      - "terminal output"
-      - "contexts/captures/*.yml"
-      - "traces, screenshots, videos, reports, and logs"
-    outputs:
-      - "smallest owning-layer fix"
-    stop_when:
-      - "Focused verification passes or a clear app/environment/framework gap is reported."
+    goal: "Repair only when requested, using actual failure evidence."
+    guide: "docs/agent-workflow.md#debugging-rules"
   reviewer:
-    goal: "Guard against duplicate coverage, brittle locators, waits, auth leaks, and artifact commits."
-    inputs:
-      - "changed files"
-      - "contexts/test-strategy.yml"
-      - "contexts/flow-graph.yml"
-      - "verification output"
-    outputs:
-      - "final task report"
-    stop_when:
-      - "Changes, commands, evidence, skipped gates, and residual risks are reported."
-
+    goal: "Check scoped changes, actual checks and private evidence; open the viewer last."
 loop_guardrails:
-  - "Check MCP availability before choosing the exploration path."
-  - "When MCP-enabled Playwright Agents are available, use them within this harness's standards and still verify with npx playwright test."
-  - "When MCP is unavailable or blocked, use playwright-cli capture workflows and CLI evidence."
-  - "Use playwright-cli captures before generating page-specific tests when captures are missing or stale."
-  - "Use npx playwright test for verification, not playwright-cli snapshots alone."
-  - "Do not add arbitrary waits."
-  - "Do not commit auth state, reports, traces, screenshots, videos, or temporary .playwright-cli files."
-  - "Commit only curated capture context that the team wants agents to reuse."
-  - "Do not broaden a focused prompt into unrelated flows."
-  - "Do not rewrite expectations to match broken behavior."
-  - "Prefer static context graph updates over runtime graph machinery in V2."
+  - "Route user intent before checking MCP/CLI availability."
+  - "Do not infer requested stages from documents, quoted examples or negated words."
+  - "Ordinary authoring does not require formal assessment, matrix, intake or mutation."
+  - "Assessment and mutation require explicit requests."
+  - "Nonfunctional testing is outside this agent's scope."
+  - "Keep tests unchanged throughout each mutation measurement."
+  - "Run-only requests do not authorize repairs."
+  - "No extra model, provider, benchmark or publication is implied."

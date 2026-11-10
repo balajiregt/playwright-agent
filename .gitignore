@@ -17,7 +17,7 @@ graphs/data/*.json
 !contexts/captures/*.png
 !contexts/captures/*.jpg
 !contexts/captures/*.jpeg
-!docs/blog/assets/*.png
+!docs/assets/*.png
 
 # Environment and local tooling
 .env
@@ -30,13 +30,8 @@ npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 
-benchmark-results/
-
 # Also ignore dependency symlinks used by isolated local validation
 node_modules
-
-# Private benchmark execution and publication state
-benchmark-results/
 
 # Security tooling and generated runtime state
 artifacts/
@@ -67,4 +62,3 @@ target/
 # Retired private import path stays ignored if accidentally recreated.
 /quality/context-inputs/
 /quality/mutation.config.local.json
-/quality/decision-bench.config.local.json

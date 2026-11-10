@@ -41,12 +41,15 @@ export function validatePlan(input:unknown,context:MutationContext,c:MutationCon
  for(const r of plan.requirements){const artifact=context.artifacts.find(a=>a.id===r.source.artifactId);if(!artifact?.text.includes(r.source.quote))throw Error('Requirement quote does not occur in the supplied artifact');}
  const patches=new Set<string>();
  for(const m of plan.mutations){
+  if(m.file===c.probeAdapter?.module||m.file===c.probeSetup?.module)throw Error('Observation and setup modules cannot be mutation targets');
   if(!plan.requirements.some(r=>r.id===m.requirementId))throw Error('Unknown mutation requirement');
   const source=context.sources.find(s=>s.file===m.file);
   if(!source||!source.code.includes(m.before)||source.code.split(m.before).length!==2||m.before===m.after)throw Error('Mutation must replace one unique match in an allowed source file');
   const hash=digest(JSON.stringify([m.file,m.before,m.after]));if(patches.has(hash))throw Error('Duplicate behavioral mutation');patches.add(hash);
   if(m.probe.kind==='count'&&!/^\d+$/.test(m.probe.expected))throw Error('Count probe expects a nonnegative integer');
-  if(m.probe.roles.length&&!c.probeSetup)throw Error('Role probes need the configured existing setup helper');
+  if(m.probe.kind==='adapter'){
+   if(!c.probeAdapter)throw Error('Adapter probes need a configured project-owned probeAdapter');
+  }else if(m.probe.roles.length&&!c.probeSetup)throw Error('Role probes need the configured existing setup helper');
   if(c.projects.length&&!c.projects.includes(m.probe.project))throw Error('Probe project is outside selected projects');
  }
  return plan;

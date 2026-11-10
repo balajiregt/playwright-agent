@@ -115,7 +115,7 @@ function mutationView(raw:unknown,e:Envelope):MutationReportView {
 }
 function view(bytes:Buffer,e:Envelope){const raw=parse(bytes);return e.kind==='playwright'?testView(raw,e):mutationView(raw,e);}
 
-async function reportsDirectory(repo:string,taskId:string,create=false):Promise<string|null>{
+export async function reportsDirectory(repo:string,taskId:string,create=false):Promise<string|null>{
  if(!/^[A-Za-z0-9][A-Za-z0-9_.-]{0,79}$/.test(taskId))fail('invalid task ID');
  const requested=path.resolve(repo),info=await lstat(requested);
  if(info.isSymbolicLink()||!info.isDirectory())fail('selected repository must be a real directory');
@@ -148,12 +148,17 @@ export async function attachReport({repo,taskId,kind,name,bytes}:{repo:string;ta
  nameSchema.parse(name);
  const e:Envelope={version:1,id:randomUUID(),kind:z.enum(['playwright','mutation']).parse(kind),name,importedAt:new Date().toISOString(),sha256:sha(bytes),base64:bytes.toString('base64')};
  view(bytes,e); // Validate before creating private storage or copying bytes.
+ const directory=await privateReportsDirectory(repo,taskId);
+ await writeFile(path.join(directory,e.id+'.json'),JSON.stringify(e)+'\n',{flag:'wx',mode:0o600});
+ return {id:e.id};
+}
+/** Shared private task evidence storage; creating it does not create intake. */
+export async function privateReportsDirectory(repo:string,taskId:string):Promise<string>{
  const directory=(await reportsDirectory(repo,taskId,true))!;
  const marker=path.join(directory,'.gitignore');
  let previous='';try{previous=(await regularBytes(marker)).toString('utf8');}catch(error){if((error as NodeJS.ErrnoException).code!=='ENOENT')throw error;}
  if(previous.trimEnd().split(/\r?\n/).at(-1)!=='*')await appendFile(marker,(previous&&!previous.endsWith('\n')?'\n':'')+'# Private imported report evidence\n*\n',{mode:0o600});
- await writeFile(path.join(directory,e.id+'.json'),JSON.stringify(e)+'\n',{flag:'wx',mode:0o600});
- return {id:e.id};
+ return directory;
 }
 export async function readReports(repo:string,taskId:string):Promise<{tests:TestReportView[];mutations:MutationReportView[]}>{
  const directory=await reportsDirectory(repo,taskId);if(!directory)return {tests:[],mutations:[]};

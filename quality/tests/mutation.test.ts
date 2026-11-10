@@ -6,10 +6,11 @@ import path from 'node:path';
 import {Client} from '@modelcontextprotocol/sdk/client/index.js';
 import {StdioClientTransport} from '@modelcontextprotocol/sdk/client/stdio.js';
 import {ROOT} from '../src/context.js';
-import {configSchema} from '../src/mutation/schema.js';
+import {configSchema,loadConfig} from '../src/mutation/schema.js';
+
 import {loadContext,validatePlan} from '../src/mutation/context.js';
-import {classify,healthy,isolatedCopy,treeHash,type Execution,type Campaign} from '../src/mutation/runner.js';
-import {campaignMetrics,renderMutationReport,predictionResults} from '../src/mutation/report.js';
+import {classify,healthy,isolatedCopy,treeHash,executionScopeHash,type Execution,type Campaign} from '../src/mutation/runner.js';
+import {campaignMetrics,renderMutationReport} from '../src/mutation/report.js';
 import {planningPrompt} from '../src/mutation/codex.js';
 async function fixture(){
  const dir=await mkdtemp(path.join(os.tmpdir(),'mutation-unit-'));await mkdir(path.join(dir,'context'));await mkdir(path.join(dir,'repo'));
@@ -64,6 +65,23 @@ test('isolated copy omits credentials and artifacts and preserves original sourc
   await symlink('/tmp',path.join(f.c.repo,'unsafe'));await assert.rejects(isolatedCopy(f.c.repo,path.join(f.dir,'copy2')),/symlink/);
  }finally{await rm(f.dir,{recursive:true,force:true});}
 });
+test('project-owned adapter probes are bounded, explicitly configured and protected from source mutation',async()=>{
+ const f=await fixture();try{
+  const c={...f.c,probeAdapter:{module:'support/observe.ts',export:'observe'}};
+  const fault={...f.plan.mutations[0],probe:{kind:'adapter',project:'viewer',expected:'empty',input:{flow:'checkout',items:[1,2]}}};
+  const plan={...f.plan,mutations:[fault]};
+  assert.equal(validatePlan(plan,f.ctx,c).mutations[0].probe.kind,'adapter');
+  assert.throws(()=>validatePlan(plan,f.ctx,f.c),/configured project-owned/);
+  assert.throws(()=>validatePlan({...plan,mutations:[{...fault,probe:{...fault.probe,input:{text:'x'.repeat(4001)}}}]},f.ctx,c));
+  assert.throws(()=>configSchema.parse({...c,probeAdapter:{module:'../outside.ts',export:'observe'}}));
+  assert.notEqual(executionScopeHash(c),executionScopeHash(f.c));
+  assert.notEqual(executionScopeHash(c),executionScopeHash({...c,probeAdapter:{...c.probeAdapter,export:'other'}}));
+  const file=path.join(f.dir,'config.json');
+  await writeFile(file,JSON.stringify({...c,sourceFiles:['support/observe.ts']}));
+  await assert.rejects(loadConfig(file),/probe adapters/);
+  assert.throws(()=>validatePlan({...plan,mutations:[{...fault,file:'support/observe.ts'}]},f.ctx,c),/cannot be mutation targets/);
+ }finally{await rm(f.dir,{recursive:true,force:true});}
+});
 test('runtime detection needs two complete repeatable assertion failures; startup, timeout and unstable results remain unknown',()=>{
  const base=execution(),failure=execution('failed',true);assert.ok(healthy(base));
  assert.equal(classify([failure,failure],base).status,'killed');
@@ -83,17 +101,26 @@ test('reports keep unactivated faults outside score denominators and escape arti
   const r:Campaign={version:1,kind:'playwright-behavioral-mutations',runId:'fixture',createdAt:new Date().toISOString(),contextHash:f.ctx.hash,plan:f.plan,baseline:[execution(),execution()],restored:execution(),faults:[{id:'M1',requirementId:'AUTH',status:'not_activated',attempts:[],killingTests:[]}],wallMs:5,originalUnchanged:true};
   assert.equal(campaignMetrics(r).observedDetectionRate,null);r.plan.requirements[0].criterion='<img src=x onerror=alert(1)>';const html=renderMutationReport(r);assert.ok(!html.includes('<img src=x'));assert.match(html,/not_activated/);
   r.faults[0].status='survived';r.faults[0].attempts=[execution(),execution()];
-  r.assessments={version:1,cells:[{mutationId:'M1',project:'viewer',testTitle:'admin absent',testFile:'test.spec.ts',status:'evaluated',answer:{label:'detected'}}]};
-  r.faults[0].attempts.forEach(e=>e.tests[0].file='/isolated/test.spec.ts');
-  assert.equal(predictionResults(r)[0].observed,'missed');assert.equal(campaignMetrics(r).laya!.predictionMatchRate,0);
-  r.faults[0].status='inconclusive';assert.equal(campaignMetrics(r).laya!.predictionMatchRate,null);
+  assert.equal(campaignMetrics(r).observedDetectionRate,0);assert.ok(!('laya' in campaignMetrics(r)),'retired model predictions are not reported');
+  r.faults[0].status='inconclusive';assert.equal(campaignMetrics(r).observedDetectionRate,null);
  }finally{await rm(f.dir,{recursive:true,force:true});}
 });
 test('actual MCP server exposes context with execution and hosted planning disabled by default',async()=>{
  const f=await fixture(),config=path.join(f.dir,'config.json');await writeFile(config,JSON.stringify(f.c));
  const client=new Client({name:'mutation-integration-test',version:'1.0.0'}),transport=new StdioClientTransport({command:process.execPath,args:['--import','tsx',path.join(ROOT,'src/mutation-cli.ts'),'mcp','--config',config],cwd:ROOT,stderr:'pipe'});
  try{
-  await client.connect(transport);const listed=await client.listTools();assert.deepEqual(listed.tools.map(t=>t.name).sort(),['assess','context','evidence','inspect']);
+  await client.connect(transport);const listed=await client.listTools();assert.deepEqual(listed.tools.map(t=>t.name).sort(),['context','evidence','inspect']);
   const result=await client.callTool({name:'context',arguments:{}});assert.match(JSON.stringify(result),new RegExp(f.ctx.hash));assert.ok(!JSON.stringify(result).includes('PRIVATE_SENTINEL'));
  }finally{await client.close();await rm(f.dir,{recursive:true,force:true});}
+});
+test('older configs with retired model-comparison settings still load; the settings are ignored',async()=>{
+ const dir=await mkdtemp(path.join(os.tmpdir(),'legacy mutation config-'));
+ try{
+  await mkdir(path.join(dir,'app'));await mkdir(path.join(dir,'requirements'));
+  await writeFile(path.join(dir,'app/app.js'),'const count=3;');await writeFile(path.join(dir,'requirements/epic.md'),'The count must equal three.');
+  await writeFile(path.join(dir,'config.json'),JSON.stringify({version:1,repo:'app',artifactDir:'requirements',sourceFiles:['app.js'],laya:{device:'mps',maxPairs:10},analysis:{scope:'synthetic'}}));
+  const c=await loadConfig(path.join(dir,'config.json'));
+  assert.ok(!('laya' in c)&&!('analysis' in c));assert.deepEqual(c.sourceFiles,['app.js']);
+  assert.throws(()=>configSchema.parse({version:1,repo:'app',artifactDir:'requirements',sourceFiles:['app.js'],unknownSetting:true}),/unknownSetting|Unrecognized/i);
+ }finally{await rm(dir,{recursive:true,force:true});}
 });

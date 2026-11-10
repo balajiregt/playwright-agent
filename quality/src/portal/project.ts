@@ -3,7 +3,7 @@ import path from 'node:path';
 import {createHash} from 'node:crypto';
 import {inspectIntake} from '../intake/store.js';
 import {readReports} from './reports.js';
-import {readAgentAnalysis} from './analysis.js';
+import {readAgentAnalysis,readTaskAnalysis} from './analysis.js';
 import type {PortalTaskDetail,PortalTaskSummary} from './types.js';
 
 export function validTask(id:string){if(!/^[A-Za-z0-9][A-Za-z0-9_.-]{0,79}$/.test(id))throw Error('Invalid work-item ID');return id;}
@@ -48,15 +48,16 @@ async function versions(repo:string,task:string){
  return result.sort((a,b)=>b.createdAt.localeCompare(a.createdAt));
 }
 export async function taskDetail(repo:string,task:string,selected?:string):Promise<PortalTaskDetail>{
- validTask(task);const runs=await versions(repo,task),reports=await readReports(repo,task);
- const id=selected??runs[0]?.id;if(!id)return {taskId:task,runs,run:null,reports};
+ validTask(task);const runs=await versions(repo,task),reports=await readReports(repo,task),analysis=await readTaskAnalysis(repo,task);
+ const taskFindings=analysis?{analysis}:{};
+ const id=selected??runs[0]?.id;if(!id)return {taskId:task,runs,run:null,reports,...taskFindings};
  if(!runs.some(r=>r.id===id))throw Error('Selected intake version is not registered for this work item');
  const root=await registeredRun(repo,task,id),value=await inspectIntake({run:root,allowStale:true});
  const matrixFile=await guarded(repo,`${runRelative(task,id)}/matrix.csv`,'file',true);
  if(matrixFile&&(await lstat(matrixFile)).size>4*1024*1024)throw Error('Traceability CSV exceeds the viewer limit');
  const matrix=matrixFile?matrixRows(await readFile(matrixFile,'utf8')):[];
- const analysis=await readAgentAnalysis(root,{intakeHash:value.snapshot.intakeHash,draftHash:value.draftHash,stale:Boolean(value.stale)});
- return {taskId:task,runs,reports,run:{id,createdAt:value.snapshot.createdAt,goal:value.snapshot.goal,intakeHash:value.snapshot.intakeHash,draftHash:value.draftHash,draft:value.draft,documents:value.snapshot.sources,openQuestions:value.draft.questions.filter(q=>!q.resolution).length,blockingDocuments:value.snapshot.sources.filter(s=>s.extraction.issues.some(i=>i.severity==='blocking')).length,reviewed:value.reviewed,accepted:value.accepted,stale:value.stale,mappings:value.snapshot.mappings,matrix,...(analysis?{analysis}:{})}};
+ const intakeAnalysis=await readAgentAnalysis(root,{intakeHash:value.snapshot.intakeHash,draftHash:value.draftHash,stale:Boolean(value.stale)});
+ return {taskId:task,runs,reports,...taskFindings,run:{id,createdAt:value.snapshot.createdAt,goal:value.snapshot.goal,intakeHash:value.snapshot.intakeHash,draftHash:value.draftHash,draft:value.draft,documents:value.snapshot.sources,openQuestions:value.draft.questions.filter(q=>!q.resolution).length,blockingDocuments:value.snapshot.sources.filter(s=>s.extraction.issues.some(i=>i.severity==='blocking')).length,reviewed:value.reviewed,accepted:value.accepted,stale:value.stale,mappings:value.snapshot.mappings,matrix,...(intakeAnalysis?{analysis:intakeAnalysis}:{})}};
 }
 export async function taskList(repo:string):Promise<PortalTaskSummary[]>{
  const root=await guarded(repo,'artifacts/agent-tasks','directory',true);if(!root)return [];
@@ -65,7 +66,9 @@ export async function taskList(repo:string):Promise<PortalTaskSummary[]>{
   if(!/^[A-Za-z0-9][A-Za-z0-9_.-]{0,79}$/.test(entry.name))continue;
   try{
    const detail=await taskDetail(repo,entry.name),run=detail.run;
-   result.push({id:entry.name,updatedAt:run?.createdAt??null,runId:run?.id??null,status:run?.stale?'Source changed':run?.blockingDocuments?'Blocked extraction':run?.accepted?'Interpretation accepted':run?'Needs review':'Reports only',criteria:run?.draft.requirements.length??0,openQuestions:run?.openQuestions??0,sources:run?.documents.length??0,testReports:detail.reports.tests.length,mutationReports:detail.reports.mutations.length});
+   const reportCount=detail.reports.tests.length+detail.reports.mutations.length;
+   const activity=[run?.createdAt,detail.analysis?.recordedAt,...detail.reports.tests.map(r=>r.importedAt),...detail.reports.mutations.map(r=>r.importedAt)];
+   result.push({id:entry.name,updatedAt:activity.filter((s):s is string=>Boolean(s)).sort().at(-1)??null,runId:run?.id??null,status:run?.stale?'Source changed':run?.blockingDocuments?'Blocked extraction':run?.accepted?'Interpretation accepted':run?'Needs review':detail.analysis?'Findings recorded':reportCount?'Reports only':'No saved evidence',criteria:run?.draft.requirements.length??0,openQuestions:run?.openQuestions??0,sources:run?.documents.length??0,testReports:detail.reports.tests.length,mutationReports:detail.reports.mutations.length});
   }catch{result.push({id:entry.name,updatedAt:null,runId:null,status:'Evidence unavailable',criteria:0,openQuestions:0,sources:0,testReports:0,mutationReports:0});}
  }
  return result.sort((a,b)=>(b.updatedAt??'').localeCompare(a.updatedAt??'')||a.id.localeCompare(b.id));

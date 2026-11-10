@@ -19,7 +19,6 @@
     "pages/**/*.ts",
     "tests/**/*.ts",
     "playwright.config.ts",
-    "benchmarks/**/*.ts",
     "examples/validation-demo/**/*.ts"
   ]
 }

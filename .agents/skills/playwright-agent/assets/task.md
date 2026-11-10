@@ -4,7 +4,7 @@ Keep this card and its supporting requirements in `contexts/tasks/<work-item>/`.
 That folder is private by default. Supply only the documents relevant to this task.
 
 - Request:
-- Mode: create / update / assess
+- Requested work: authoring (create/update/run) / explicit assessment / explicit mutation / explicit combination
 - Selected repository:
 - Feature, roles and states:
 - Requirements/PRD/Jira export files:
@@ -24,8 +24,9 @@ not settle business requirements.
 
 - Mutation sensitivity requested: yes / no
 - Quality-module mutation configuration, if applicable:
-- Decision provider requested: none / Laya / Jev / OpenAI
-- Existing provider configuration or reviewed-label set, if applicable:
+- Reviewed-label set, if applicable:
 
 The agent should discover framework paths and commands rather than asking the
 user to fill them all in. Optional stages default to not requested.
+- Formal acceptance/test-matrix assessment requested: yes / no
+Nonfunctional testing is outside scope. Run-only does not authorize repairs.

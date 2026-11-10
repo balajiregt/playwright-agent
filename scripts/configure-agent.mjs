@@ -6,6 +6,12 @@ import { isDeepStrictEqual } from 'node:util';
 const defaultToolkit = fileURLToPath(new URL('../', import.meta.url));
 const configName = '.playwright-agent.local.json';
 const skillName = '.agents/skills/playwright-agent/SKILL.md';
+const skills = {
+  'playwright-agent': 'Route functional Playwright work to the requested task skill.',
+  'playwright-test-authoring': 'Create, edit or execute functional Playwright tests with focused checks.',
+  'playwright-assessment': 'Assess functional coverage, matrices or duplicates only when explicitly requested.',
+  'playwright-mutation': 'Verify reviewed application faults against unchanged tests only when explicitly requested.'
+};
 const copilotName = '.github/agents/playwright.agent.md';
 const portable = value => value.split(path.sep).join('/');
 const inside = (root, file) => file.startsWith(root + path.sep);
@@ -39,11 +45,11 @@ function guidance(toolkitLink, relativeConfig) {
 
 The selected target is **the adopter repository containing this shim**, not the toolkit repository or its sample CRM. This explicit target overrides the canonical skill's default repository. Read this target's local AGENTS.md when present, package.json, and existing \`${relativeConfig}\` before changing tests. Use the target's existing helpers, fixtures, page objects, test locations and context equivalents; do not copy the toolkit framework or require its example context maps.
 
-Select the user's ticket, acceptance criteria or task folder explicitly. No requirements document, provider or workload is selected by onboarding. Keep assessment-only requests read-only. Build an evidence-linked acceptance matrix, reuse existing coverage, and verify only through the target's real commands. Missing execution or assertions remain unknown; report product/environment gaps without weakening tests.
+Select the user's ticket, acceptance criteria or task folder explicitly. Route the prompt before choosing tools. Ordinary create/update work uses test authoring and focused verification; formal assessment/matrices and mutation run only when explicitly requested. Preserve exclusions and keep assessment-only work read-only. Use only the target's real commands and report unsupported behavior without weakening tests. A simple test change needs no intake UUID.
 
 For downloaded tickets, PDFs, flows or Excel RTMs, follow the canonical workflow's document-intake guide. Use the toolkit's intake command with this adopter as --repo. The agent handles structured draft files, shows source-linked criteria and clarifications to the tester, and accepts only the exact reviewed interpretation after explicit user confirmation. Keep originals and reports private; intake does not prove product acceptance or execute tests.
 
-Use the host coding agent's existing model, file edits, terminal and available browser tools. Code Mode is optional and exposes only its configured tools; it is not a generic test-writing API. Do not install dependencies, enable providers, run mutation campaigns, register global MCP servers or hooks, publish, or deploy as a side effect of selecting this agent. Follow the target's permissions and instructions.
+Use the host coding agent's existing model, file edits, terminal and available browser tools. Do not install dependencies, enable providers, run mutation campaigns, register global MCP servers or hooks, publish, or deploy as a side effect of selecting this agent. Follow the target's permissions and instructions.
 `;
 }
 
@@ -54,7 +60,9 @@ export async function configureAgent({ repo, playwrightConfig = 'playwright.conf
   if (!(await fs.stat(target)).isDirectory()) throw new Error('--repo must select an existing repository directory');
   const toolkit = await fs.realpath(path.resolve(toolkitRoot));
   const canonicalSkill = path.join(toolkit, skillName);
-  if (await existingFile(canonicalSkill) === null) throw new Error('Toolkit canonical Playwright Agent skill is missing');
+  for (const name of Object.keys(skills)) {
+    if (await existingFile(path.join(toolkit, '.agents/skills', name, 'SKILL.md')) === null) throw new Error('Toolkit canonical Playwright Agent skill is missing: '+name);
+  }
   const packageText = await existingFile(path.join(target, 'package.json'));
   if (packageText === null) throw new Error('Selected repository must already contain package.json');
   let pkg;
@@ -75,15 +83,27 @@ export async function configureAgent({ repo, playwrightConfig = 'playwright.conf
   }
   const relativeConfig = portable(path.relative(target, configFile));
   const toolkitPath = portable(path.relative(target, toolkit)) || '.';
+  const storedText=await existingFile(path.join(target,configName));
+  let storedConfig;
+  if(storedText!==null){
+    try{storedConfig=JSON.parse(storedText);}catch{throw new Error('Existing local agent configuration is invalid JSON');}
+    if(storedConfig===null||typeof storedConfig!=='object'||Array.isArray(storedConfig))throw new Error('Existing local agent configuration must be an object');
+  }
   const localConfig = { version: 1, toolkitPath, playwrightConfig: relativeConfig };
   const planned = [{ file: configName, content: JSON.stringify(localConfig, null, 2) + '\n', json: localConfig }];
   if (client === 'codex' || client === 'both') {
-    const link = portable(path.relative(path.dirname(path.join(target, skillName)), canonicalSkill));
-    planned.push({ file: skillName, content: `---\nname: playwright-agent\ndescription: Create, update or assess tests in this existing Playwright project with acceptance and execution evidence.\n---\n\n# Playwright Agent for this project\n\n${guidance(link, relativeConfig)}` });
+    for (const [name, description] of Object.entries(skills)) {
+      const file = '.agents/skills/'+name+'/SKILL.md';
+      const link = portable(path.relative(path.dirname(path.join(target, file)), path.join(toolkit, file)));
+      planned.push({file, content: `---\nname: ${name}\ndescription: ${description}\n---\n\n${guidance(link, relativeConfig)}`});
+      if (name === 'playwright-assessment' || name === 'playwright-mutation') {
+        planned.push({file: '.agents/skills/'+name+'/agents/openai.yaml', content: 'policy:\n  allow_implicit_invocation: false\n'});
+      }
+    }
   }
   if (client === 'copilot' || client === 'both') {
     const link = portable(path.relative(path.dirname(path.join(target, copilotName)), canonicalSkill));
-    planned.push({ file: copilotName, content: `---\nname: Playwright Agent\ndescription: Create, update or assess this project's existing Playwright tests with an acceptance matrix and real evidence.\n---\n\n${guidance(link, relativeConfig)}` });
+    planned.push({ file: copilotName, content: `---\nname: Playwright Agent\ndescription: Route this project's functional Playwright work to the requested task skill.\n---\n\n${guidance(link, relativeConfig)}` });
   }
 
   // Check every selected destination before creating directories or changing any file.
@@ -94,7 +114,8 @@ export async function configureAgent({ repo, playwrightConfig = 'playwright.conf
     if (previous === null) continue;
     let equal = previous === item.content;
     if (item.json) {
-      try { equal = isDeepStrictEqual(JSON.parse(previous), item.json); } catch { equal = false; }
+      // A retired decisionProvider key is ignored and left in place, so older configs stay valid.
+      try { const { decisionProvider: _retired, ...base } = JSON.parse(previous); equal = isDeepStrictEqual(base, item.json); } catch { equal = false; }
     }
     if (!equal) throw new Error(`Refusing to overwrite existing different ${item.file}; review the existing configuration first`);
     unchanged.push(item.file);
@@ -103,17 +124,18 @@ export async function configureAgent({ repo, playwrightConfig = 'playwright.conf
   const ignore = await existingFile(ignorePath);
   const hasIgnore = (ignore ?? '').split(/\r?\n/).some(line => [configName, '/' + configName].includes(line.trim()));
   const created = [];
+  const updated = [];
   for (const item of planned.filter(item => !unchanged.includes(item.file))) {
     const destination = path.join(target, item.file);
     await fs.mkdir(path.dirname(destination), { recursive: true });
-    await fs.writeFile(destination, item.content, { flag: 'wx' });
-    created.push(item.file);
+    await fs.writeFile(destination, item.content, { flag: item.update?'w':'wx' });
+    (item.update?updated:created).push(item.file);
   }
   if (!hasIgnore) {
     const newline = ignore?.includes('\r\n') ? '\r\n' : '\n';
     await fs.appendFile(ignorePath, `${ignore && !ignore.endsWith('\n') ? newline : ''}${configName}${newline}`);
   }
-  return { version: 1, repo: target, toolkitPath, playwrightConfig: relativeConfig, client, created, unchanged, gitignoreUpdated: !hasIgnore };
+  return { version: 1, repo: target, toolkitPath, playwrightConfig: relativeConfig, client, created, updated, unchanged, gitignoreUpdated: !hasIgnore };
 }
 
 function parseArgs(args) {

@@ -2,7 +2,7 @@
 
 This demo uses only the bundled Sample CRM, synthetic requirements and the
 existing framework and behavioral mutation runner. It needs no sibling
-mockserver, customer documents, credentials, decision provider or model server.
+mockserver, customer documents, credentials or model server.
 The seeded demo accounts are test fixtures, not production identities.
 
 ## Setup and browser verification
@@ -15,18 +15,27 @@ npm ci --prefix quality
 npx playwright install chromium
 ```
 
-Run the complete offline validation:
+Run the browser suite and record it on the demo work item:
 
 ```sh
-npm run demo:prepare
-npm run demo:verify
+PLAYWRIGHT_AGENT_TASK=CRM-DEMO-001 PLAYWRIGHT_AGENT_REPO="$PWD" \
+  npx playwright test --config examples/validation-demo/playwright.config.ts \
+  --reporter=list,./reporter/index.mjs
 ```
 
-Preparation validates the bundled synthetic work item without changing task
-documents. Verification includes the existing source → tests → coverage →
-duplicate-analysis graph pipeline, six browser tests, acceptance evidence and
-the mandatory model-free mutation checks below. It does not start providers or
-publish results. `npm run demo:package` prepares the reviewed shareable archive.
+Then run the reviewed faults and build the report:
+
+```sh
+npm run mutation -- bind --catalogue examples/validation-demo/fault-catalogue.json --config examples/validation-demo/mutation.config.json
+npm run mutation -- run --config examples/validation-demo/mutation.config.json --allow-run
+npm run portal -- attach --repo . --task CRM-DEMO-001 --kind mutation --file artifacts/validation-demo/mutations/RUN_ID/campaign.json
+npm run report -- --repo . --task CRM-DEMO-001
+```
+
+`bind` validates the reviewed catalogue against the current task and source
+hashes without executing anything. `run` uses the mandatory model-free mutation
+checks below. Open `playwright-agent-report/index.html` to see the passing suite
+beside the fault it misses. Nothing starts a model provider or publishes results.
 
 For focused browser troubleshooting, use:
 
@@ -49,9 +58,8 @@ ignored `artifacts/validation-demo/browser/`.
 
 The tracked [CRM-DEMO-001 task](../../contexts/tasks/CRM-DEMO-001/epic.md)
 contains an authored epic, synthetic tickets and normalized requirements. It is
-the single shared source used by `mutation.config.json`, Git clones and the
-community ZIP. `npm run demo:prepare` validates these existing files without
-copying or overwriting documents. Other work items remain private and ignored;
+the single shared source used by `mutation.config.json` and Git clones;
+`mutation bind` reads these existing files without copying or overwriting them. Other work items remain private and ignored;
 use a separate task ID for real tickets and exports.
 
 | Criterion | Existing demonstration evidence |
@@ -70,21 +78,13 @@ exhaustive role coverage.
 
 ## Inspect the existing graphs
 
-The graph stage reuses this repository's existing graph scripts and interactive
-HTML view. It adds no graph framework or model. It checks whether the bundled
-CRM source manifest matches its adapter's current output. If stale, it generates
-a replacement only in the run's ignored artifacts; it never refreshes tracked
-application source or the tracked manifest. The standard ignored `graphs/`
-outputs are regenerated and copied into the run snapshot.
-
-The demo report links the run's interactive `graphs/index.html`. Beside it,
-`manifest.json` records the actual command receipts, source-manifest freshness,
-artifact SHA256 hashes, source/test counts, candidate gaps and duplicate/overlap
-counts. A failed graph pipeline fails this validation stage. For a separate
-graph-only inspection, choose a fresh ignored output directory:
+The repository's existing graph scripts and interactive HTML view show the
+sample CRM's source → tests → coverage → duplicate analysis. They add no graph
+framework or model, and never refresh tracked application source. Regenerate and
+open them with:
 
 ```sh
-node scripts/validation-graphs.mjs --output-dir artifacts/validation-demo/MY-RUN/graphs
+npm run graph:view
 ```
 
 These graphs discover the **whole repository**, not only the six selected demo
@@ -99,9 +99,9 @@ browser and mutation evidence.
 
 [The config](mutation.config.json) selects only the bundled CRM browser source
 and the prepared task folder. [The fixed catalogue](fault-catalogue.json)
-cites exact `epic.md` quotes. The validation orchestration binds that catalogue
-to the current source and task hashes, then runs the existing mutation runner;
-no planner or decision provider is required.
+cites exact `epic.md` quotes. `mutation bind` binds that catalogue to the current
+source and task hashes, then `mutation run` executes it; no planner or model is
+required.
 
 | Fault | Independent observation | Expected suite outcome, pending execution |
 | --- | --- | --- |
@@ -117,4 +117,4 @@ Detailed reports stay under ignored `artifacts/validation-demo/mutations/`.
 The intended surviving fault is a validation of the demonstration's ability to
 expose a known test gap. It is **not** fulfilled acceptance or a claim that the
 suite detects all faults. Keep its missing assertion visible in the acceptance
-report. Provider comparisons and publication are separate opt-in work.
+report.

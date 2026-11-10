@@ -4,7 +4,7 @@ Give your coding agent the ticket, PRD, epic, Jira export or traceability matrix
 in chat, identify your existing Playwright project, and state whether to create,
 update or assess tests. The agent prepares source-linked criteria and reviews
 ambiguities with you in chat, completes the authorized workflow using native
-tools and saves its matrix/findings. It opens the read-only report viewer last,
+tools and saves its findings (and a matrix only for requested assessment). It opens the read-only report viewer last,
 when its tools permit. You do not need to write JSON or configure a decision model.
 
 The host must expose each selected attachment as a local file or readable text.
@@ -23,6 +23,10 @@ or Confluence, perform OCR, call providers, execute tests or publish data.
 Extraction does not establish full understanding of your business requirements.
 The [report viewer](portal.md) inspects the saved outcome; it does not upload,
 edit, approve or execute anything.
+
+A clear prompt or existing requirement file needs no intake. Ordinary authoring
+can save task findings directly with portal analysis without --run. Reading a
+ticket does not implicitly request formal coverage assessment or mutation.
 
 Intake uses Node 22+ and Python. It prefers the toolkit's `quality/.venv`
 interpreter, then system Python; `--python PATH` selects an existing interpreter.

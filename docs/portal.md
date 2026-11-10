@@ -49,12 +49,25 @@ today's implementation.
 
 ## Save findings and actual reports
 
+For ordinary test creation, edits, execution or a mutation task without document
+intake, save task-level findings directly:
+
+~~~sh
+npm run portal -- analysis --repo "../my-existing-project" --task LOGIN-123 --file "../my-existing-project/artifacts/agent-tasks/LOGIN-123/findings.md"
+~~~
+
+Omit --run to store findings in the existing private task evidence area without
+creating intake, criteria, questions or a matrix. The viewer labels these as task
+findings; it does not automatically check application/test freshness. Record
+revisions, commands and evidence references in the findings. A formal assessment
+or document intake is not a prerequisite for authoring.
+
 Use the existing private work-item paths. Intake keeps source originals in
 `contexts/tasks/<work-item>/` and its versions under
 `artifacts/agent-tasks/<work-item>/intake/<runId>/`. Do not create another task
 store for the viewer.
 
-After reviewing the draft, the native agent records its scenario, test,
+For a requested assessment with an existing intake, the native agent records its scenario, test,
 assertion and assessment evidence in that version's existing `matrix.csv`,
 preserving the headers and source references. Intake review regenerates the
 initial matrix, so assessed cells are written after review of the current
@@ -75,11 +88,13 @@ against its selected UUID:
 npm run portal -- analysis --repo "../my-existing-project" --task LOGIN-123 --run RUN_UUID --file "../my-existing-project/artifacts/agent-tasks/LOGIN-123/analysis.md"
 ```
 
-`portal analysis --run` takes a UUID; `intake review --run` takes a directory.
+The optional `portal analysis --run` takes a UUID; `intake review --run` takes a directory.
 The saved analysis is bound to the intake/draft hashes and displayed read-only.
 A changed draft makes it stale. These hashes check the recorded interpretation,
 not the truth of the assessment or the freshness of application/test source.
 The native agent must inspect and record the relevant revisions.
+Task findings and intake-bound findings can coexist; the viewer shows both
+without silently rebinding one to the other.
 
 After actual execution, attach the fresh supported JSON report to the same task:
 
@@ -106,6 +121,16 @@ copies and uses Playwright for execution. Follow
 [behavioral mutation guidance](../quality/docs/behavioral-mutations.md) only when
 that stage is requested. A mutation plan or sanitized `metrics.json` is not a
 substitute for the detailed campaign evidence.
+
+## Shareable static report
+
+`npm run portal -- report --repo PROJECT [--task ID] [--out DIR]` writes one
+self-contained `index.html` (default `PROJECT/playwright-agent-report/`, with a
+`*` .gitignore). It embeds the same records the viewer reads, omits the absolute
+project path and original documents, and executes nothing. Findings and error
+excerpts are embedded, so treat the file as private. The
+[project reporter](adoption.md#get-an-evidence-report-from-every-run) attaches each
+Playwright run and rebuilds this file automatically.
 
 ## Open the viewer last
 
@@ -146,11 +171,10 @@ each have different meanings. The viewer does not combine them into a product
 acceptance score or infer progress trends between unmatched runs.
 
 **Layout preview** is a labelled fictional example stored only in the browser.
-It creates no project records and provides no benchmark evidence. Exit it to
+It creates no project records and is not evidence. Exit it to
 return to the selected project's actual records. Close an inspector with its
 close control or Escape; focus returns to the control that opened it.
 
 Accuracy, setup effort, review cost and usability of the complete workflow still
 need real evaluation. Runtime/unit checks establish only the behavior they
-exercise. See the [workflow validation protocol](workflow-validation.md) for the
-pending comparison and its evidence requirements.
+exercise. Use [evaluation reports](evaluation-reports.md) for task-based evidence.

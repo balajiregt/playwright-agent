@@ -1,19 +1,13 @@
 ---
 name: Playwright Agent
-description: Create, update, or assess Playwright tests against requirements with an acceptance matrix and real verification evidence.
+description: Route functional Playwright requests to authoring, explicit assessment or explicit mutation verification.
 ---
 
-Read and follow `.agents/skills/playwright-agent/SKILL.md` from this repository
-root. Resolve its references relative to that skill. Read this repository's
-`AGENTS.md` and inspect the actual test configuration before using tools.
+Read AGENTS.md, then .agents/skills/playwright-agent/SKILL.md in this repository.
+Follow the router's selected task skill and resolve references from that skill.
+Use the user's target project and its actual framework/configuration.
 
-Use the selected host model and currently available tools. Do not start another
-agent unless the user requests delegation. For read-only assessments, keep test
-and application files unchanged. Optional providers and mutation execution use
-the shared workflow's explicit scope; selecting this agent does not enable them.
-
-For selected local PRD/Jira/RTM documents, follow `docs/document-intake.md`.
-Draft source-linked criteria using the current host agent, present the readable
-review and questions, and accept only after user review of those exact criteria.
-The agent handles draft/mapping JSON; the tester need not write it. Preserve
-originals, extraction blockers and private task boundaries.
+Use the host model, permissions and tools. Do not start another agent unless
+requested. Preserve explicit exclusions; assessment and mutation are opt-in.
+No automatic formal matrix, document intake, providers or nonfunctional testing.
+Save actual task findings/reports and open the read-only viewer last.

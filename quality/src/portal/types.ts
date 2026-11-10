@@ -32,6 +32,7 @@ export interface MutationReportView {
 }
 export interface PortalTaskDetail {
  taskId:string;runs:{id:string;createdAt:string;goal:string}[];run:PortalRun|null;
+ analysis?:AgentAnalysis;
  reports:{tests:TestReportView[];mutations:MutationReportView[]};
 }
 export interface PortalTaskSummary {

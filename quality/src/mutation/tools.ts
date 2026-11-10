@@ -3,12 +3,28 @@ import path from 'node:path';
 import {loadContext,validatePlan} from './context.js';
 import type {MutationConfig} from './schema.js';
 import {planWithCodex} from './codex.js';
-import {assessWithLaya} from './laya.js';
 import {runCampaign} from './runner.js';
 import {campaignMetrics} from './report.js';
-import {digest} from '../context.js';
-import {treeHash} from './runner.js';
 
+/**
+ * Bind a reviewed, portable fault catalogue (requirements cite artifact filenames) to the
+ * current requirements/source context and save it as the runnable plan. Nothing is executed.
+ */
+export async function bindCatalogue(c:MutationConfig,catalogueFile:string){
+ const context=await loadContext(c),raw=JSON.parse(await readFile(catalogueFile,'utf8'));
+ if(!raw||typeof raw!=='object'||Array.isArray(raw))throw Error('Fault catalogue must be a JSON object');
+ if(raw.contextHash===undefined){
+  raw.contextHash=context.hash;
+  for(const r of Array.isArray(raw.requirements)?raw.requirements:[]){
+   const artifact=context.artifacts.find(a=>a.file===r?.source?.artifactFile);
+   if(!artifact)throw Error('Catalogue cites an artifact file that is not in the selected requirements');
+   r.source={artifactId:artifact.id,quote:r.source.quote};
+  }
+ }
+ const plan=validatePlan(raw,context,c),planFile=path.join(c.output,'plan.json');
+ await mkdir(c.output,{recursive:true});await writeFile(planFile,JSON.stringify(plan,null,2));
+ return {planFile,contextHash:plan.contextHash,requirements:plan.requirements.length,mutations:plan.mutations.map(m=>({id:m.id,requirementId:m.requirementId,description:m.description})),executed:false};
+}
 export function mutationTools(c:MutationConfig,options:{allowHosted?:boolean;allowRun?:boolean}={}){
  const planFile=path.join(c.output,'plan.json');
  const plan=async()=>validatePlan(JSON.parse(await readFile(planFile,'utf8')),await loadContext(c),c);
@@ -17,7 +33,6 @@ export function mutationTools(c:MutationConfig,options:{allowHosted?:boolean;all
   async evidence(){return loadContext(c);},
   async plan(){if(!options.allowHosted)throw Error('Codex planning requires explicit --allow-hosted');const ctx=await loadContext(c),result=await planWithCodex(c,ctx);await mkdir(c.output,{recursive:true});await writeFile(planFile,JSON.stringify(result.plan,null,2));await writeFile(path.join(c.output,'planner.json'),JSON.stringify(result.metadata,null,2));return {planFile,requirements:result.plan.requirements.length,mutations:result.plan.mutations.map(m=>({id:m.id,requirementId:m.requirementId,description:m.description})),metadata:result.metadata};},
   async inspect(){return plan();},
-  async assess(){const result=await assessWithLaya(c,await plan());await writeFile(path.join(c.output,'laya.json'),JSON.stringify(result,null,2));return {pairs:result.cells.length,completed:result.cells.filter(c=>c.status==='evaluated').length,excluded:result.cells.filter(c=>c.status==='excluded').length,metadata:result.metadata};},
-  async run(){if(!options.allowRun)throw Error('Mutation execution requires explicit --allow-run');let a;try{a=JSON.parse(await readFile(path.join(c.output,'laya.json'),'utf8'));}catch{}const p=await plan();if(a?.contextHash!==p.contextHash||a?.planHash!==digest(JSON.stringify(p))||a?.repositoryHash!==await treeHash(c.repo))a=undefined;const {dir,report}=await runCampaign(c,p,a);return {dir,metrics:campaignMetrics(report)};}
+  async run(){if(!options.allowRun)throw Error('Mutation execution requires explicit --allow-run');const p=await plan();const {dir,report}=await runCampaign(c,p);return {dir,metrics:campaignMetrics(report)};}
  };
 }

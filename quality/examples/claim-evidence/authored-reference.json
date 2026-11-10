@@ -1,0 +1,88 @@
+{
+  "version": 1,
+  "reviewKind": "author_reviewed",
+  "reviewedBy": "Fixture author technical review; not independent human validation",
+  "note": "Prepared before provider execution. Expected labels are not part of evidence packets. Matching these labels is a self-authored fixture check, not production precision.",
+  "labels": [
+    {
+      "caseId": "CASE-01",
+      "expected": "supports",
+      "rationale": "The test establishes loaded state, injects a backend failure for refresh, then asserts zero cards."
+    },
+    {
+      "caseId": "CASE-02",
+      "expected": "not_demonstrated",
+      "rationale": "The setup and error are exercised, but only status text is asserted; no card-removal assertion exists."
+    },
+    {
+      "caseId": "CASE-03",
+      "expected": "contradicts",
+      "rationale": "The reached card-count assertion explicitly expects three old cards instead of zero."
+    },
+    {
+      "caseId": "CASE-04",
+      "expected": "supports",
+      "rationale": "After the sign-in action and visible dashboard, the test asserts the login form is hidden."
+    },
+    {
+      "caseId": "CASE-05",
+      "expected": "not_demonstrated",
+      "rationale": "Dashboard visibility is asserted, but login-form absence is not asserted."
+    },
+    {
+      "caseId": "CASE-06",
+      "expected": "contradicts",
+      "rationale": "The reached assertion requires the login form to remain visible."
+    },
+    {
+      "caseId": "CASE-07",
+      "expected": "supports",
+      "rationale": "Viewer role is injected and displayed; the admin action count is asserted zero."
+    },
+    {
+      "caseId": "CASE-08",
+      "expected": "not_demonstrated",
+      "rationale": "Viewer identity is established, but admin-action absence is not asserted."
+    },
+    {
+      "caseId": "CASE-09",
+      "expected": "contradicts",
+      "rationale": "Viewer identity is established but the admin action is explicitly asserted visible."
+    },
+    {
+      "caseId": "CASE-10",
+      "expected": "needs_judgment",
+      "rationale": "The required imported helper is unavailable; deterministic collection must stop before inference."
+    },
+    {
+      "caseId": "CASE-11",
+      "expected": "needs_judgment",
+      "rationale": "Unresolved dynamic dispatch/environment prevents proving the assertion is reached."
+    },
+    {
+      "caseId": "CASE-12",
+      "expected": "needs_judgment",
+      "rationale": "The exact selected requirement quote is absent; deterministic validation must stop."
+    },
+    {
+      "caseId": "CASE-13",
+      "expected": "supports",
+      "rationale": "The reached imported helper contains the explicit zero-card assertion."
+    },
+    {
+      "caseId": "CASE-14",
+      "expected": "not_demonstrated",
+      "rationale": "The imported helper only checks error status; its name does not establish card removal."
+    },
+    {
+      "caseId": "CASE-15",
+      "expected": "needs_judgment",
+      "rationale": "The supplied test hash is stale; no inference is permitted."
+    },
+    {
+      "caseId": "CASE-16",
+      "expected": "needs_judgment",
+      "rationale": "The requirement artifact is unavailable; no inference is permitted."
+    }
+  ]
+}

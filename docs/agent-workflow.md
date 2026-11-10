@@ -16,9 +16,9 @@ requests stop before making changes unless implementation is requested.
 This repository is **Playwright Agent**: requirement-guided test authoring,
 acceptance assessment, and mutation verification in one product. Existing
 fixtures, page objects, capture workflows and graphs provide the framework.
-The internal `quality/` module owns evaluator code, decision adapters, mutation
-execution and reports; read `quality/AGENTS.md` for changes there. Use root
-`npm run qa` / `npm run mutation` entry points. The old standalone decision-bench checkout is archived; any retained recovery
+The internal `quality/` module owns intake, claim checks, mutation execution and
+the report viewer; read `quality/AGENTS.md` for changes there. Use the root
+`npm run intake` / `claims` / `mutation` / `report` entry points. The old standalone decision-bench checkout is archived; any retained recovery
 material is historical and is not an active project or dependency.
 
 ## Project Intent
@@ -72,7 +72,13 @@ harness must remain usable without it.
 
 ## Operating Model
 
-Agents work through a repeatable observe-plan-act-verify loop:
+First follow the [task router](../.agents/skills/playwright-agent/SKILL.md).
+The loop below applies to authoring and debugging, not every request.
+Assessment-only work keeps code unchanged and executes only requested checks.
+Mutation follows its own explicit skill with frozen tests and disposable faults.
+Nonfunctional testing is outside this agent's scope.
+
+Authoring uses an observe-plan-act-verify loop:
 
 1. Read these instructions and any project-local context files.
 2. Check whether MCP-enabled official Playwright Agents are available and
@@ -159,8 +165,10 @@ existing tests, captures, and graph gaps.
 
 ## Prompt Mode Router
 
-For prompts such as `create tests for manager role flow`, choose the operating
-mode before collecting page context:
+The prompt's task intent is selected by the canonical router first. This section
+selects tools within that authorized task; MCP availability does not select
+assessment or mutation. For authoring such as `create tests for manager role flow`,
+choose the operating mode before collecting any needed page context:
 
 1. Check whether MCP-enabled official Playwright Agents are available and
    allowed.

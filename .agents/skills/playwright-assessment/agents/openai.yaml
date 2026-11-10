@@ -1,0 +1,6 @@
+interface:
+  display_name: "Playwright Assessment"
+  short_description: "Review requested functional coverage and gaps"
+  default_prompt: "Use $playwright-assessment to review the selected requirements and actual assertions without editing tests."
+policy:
+  allow_implicit_invocation: false

@@ -26,12 +26,5 @@
   "readiness": {
     "testId": "connection-status",
     "text": "Mockserver connected"
-  },
-  "laya": {
-    "device": "auto",
-    "maxPairs": 30
-  },
-  "analysis": {
-    "scope": "synthetic"
   }
 }
