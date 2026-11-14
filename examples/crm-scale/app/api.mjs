@@ -1,7 +1,6 @@
 // CRM-Scale: a deterministic, dependency-free CRM used to benchmark Playwright test
 // assessment and mutation verification. Each session belongs to a tenant with its own
 // seeded data, so tests are isolated and can run in parallel. "Today" is fixed.
-// Faults (benchmark mode only) are named switches at the exact rule sites.
 import { randomUUID } from 'node:crypto';
 
 export const TODAY = '2026-11-15';
@@ -10,18 +9,6 @@ export const STAGES = { prospecting: 10, qualification: 25, proposal: 50, negoti
 export const TAX_RATE = 0.18;
 export const PAGE_SIZE = 10;
 
-export const FAULTS = [
-  'lead-email-format', 'lead-duplicate', 'lead-convert-twice', 'lead-convert-no-account',
-  'opp-weighted', 'opp-lost-reason', 'opp-value-negative',
-  'quote-tax', 'quote-rounding', 'quote-threshold', 'quote-send-unapproved', 'quote-approve-sales',
-  'invoice-number', 'invoice-overdue', 'invoice-partial', 'invoice-from-draft-quote',
-  'task-sort', 'task-complete-other', 'task-due-required',
-  'report-pipeline', 'report-outstanding',
-  'user-last-admin', 'user-deactivated-login', 'user-duplicate-email',
-  'account-unique', 'account-delete-open-invoice', 'contact-email', 'paging',
-  'viewer-edit-opps', 'export-sales', 'audit-missing-delete', 'settings-manager',
-  'support-delete-contacts'
-];
 
 // action -> roles allowed
 export const PERMISSIONS = {
@@ -93,26 +80,20 @@ function seed() {
   };
 }
 
-export function quoteTotals(quote, fault) {
+export function quoteTotals(quote) {
   const subtotal = quote.lines.reduce((sum, l) => sum + l.qty * l.unitPrice, 0);
   const discount = subtotal * quote.discountPct / 100;
-  const taxRate = fault === 'quote-tax' ? 0.08 : TAX_RATE;
+  const taxRate = TAX_RATE;
   const raw = (subtotal - discount) * (1 + taxRate);
-  const total = fault === 'quote-rounding' ? Math.floor(raw) : round2(raw);
+  const total = round2(raw);
   return { subtotal: round2(subtotal), discount: round2(discount), tax: round2((subtotal - discount) * taxRate), total };
 }
 
-export function createApi({ fault = null } = {}) {
-  if (fault !== null && !FAULTS.includes(fault)) throw new Error(`Unknown benchmark fault: ${fault}`);
+export function createApi() {
   const tenants = new Map();
   const sessions = new Map();
   const tenantData = name => { if (!tenants.has(name)) tenants.set(name, seed()); return tenants.get(name); };
   const can = (role, action) => {
-    if (fault === 'viewer-edit-opps' && action === 'opportunities.edit' && role === 'viewer') return true;
-    if (fault === 'export-sales' && action === 'accounts.export' && role === 'sales') return true;
-    if (fault === 'quote-approve-sales' && action === 'quotes.approve' && role === 'sales') return true;
-    if (fault === 'settings-manager' && action === 'settings.edit' && role === 'manager') return true;
-    if (fault === 'support-delete-contacts' && action === 'contacts.delete' && role === 'support') return true;
     return (PERMISSIONS[action] ?? []).includes(role);
   };
   const permissionsFor = role => Object.keys(PERMISSIONS).filter(a => can(role, a));
@@ -143,7 +124,7 @@ export function createApi({ fault = null } = {}) {
       const db = tenantData(tenant);
       const user = db.users.find(u => u.email === body.email);
       if (!user || body.password !== 'password') return reply(401, { error: 'Invalid email or password' });
-      if (!user.active && fault !== 'user-deactivated-login') return reply(403, { error: 'This account is deactivated' });
+      if (!user.active) return reply(403, { error: 'This account is deactivated' });
       const token = randomUUID();
       sessions.set(token, { tenant, userId: user.id });
       return reply(200, { role: user.role }, { 'set-cookie': `crm-scale=${token}; HttpOnly; SameSite=Strict; Path=/` });
@@ -157,7 +138,7 @@ export function createApi({ fault = null } = {}) {
     if (!session) return reply(401, { error: 'Authentication required' });
     const db = tenantData(session.tenant);
     const me = db.users.find(u => u.id === session.userId);
-    if (!me || (!me.active && fault !== 'user-deactivated-login')) return reply(401, { error: 'Authentication required' });
+    if (!me || !me.active) return reply(401, { error: 'Authentication required' });
     const role = me.role;
     const deny = () => reply(403, { error: 'You do not have permission to do that' });
     const invalid = (errors) => reply(422, { error: 'Validation failed', errors });
@@ -167,7 +148,7 @@ export function createApi({ fault = null } = {}) {
     const [resource, id, sub] = parts;
     const list = (items, q, fields) => {
       const filtered = q ? items.filter(it => fields.some(f => String(it[f] ?? '').toLowerCase().includes(q.toLowerCase()))) : items;
-      const size = fault === 'paging' ? 20 : PAGE_SIZE;
+      const size = PAGE_SIZE;
       const page = Math.max(1, Number(url.searchParams.get('page') ?? 1) || 1);
       return { items: filtered.slice((page - 1) * size, page * size), total: filtered.length, page, pageSize: size };
     };
@@ -182,7 +163,7 @@ export function createApi({ fault = null } = {}) {
         if (!can(role, 'accounts.create')) return deny();
         const name = String(body.name ?? '').trim();
         if (!name) return invalid({ name: 'Account name is required' });
-        const clash = fault === 'account-unique' ? db.accounts.some(a => a.name === name) : db.accounts.some(a => a.name.toLowerCase() === name.toLowerCase());
+        const clash = db.accounts.some(a => a.name.toLowerCase() === name.toLowerCase());
         if (clash) return invalid({ name: 'An account with this name already exists' });
         const account = { id: nextId('a'), name, industry: String(body.industry ?? ''), owner: me.id };
         db.accounts.unshift(account); audit('create', 'account', account.id);
@@ -200,9 +181,9 @@ export function createApi({ fault = null } = {}) {
       if (req.method === 'DELETE') {
         if (!can(role, 'accounts.delete')) return deny();
         const open = db.invoices.some(i => i.accountId === id && i.status !== 'paid');
-        if (open && fault !== 'account-delete-open-invoice') return reply(409, { error: 'Account has unpaid invoices and cannot be deleted' });
+        if (open) return reply(409, { error: 'Account has unpaid invoices and cannot be deleted' });
         db.accounts = db.accounts.filter(a => a.id !== id);
-        if (fault !== 'audit-missing-delete') audit('delete', 'account', id);
+        audit('delete', 'account', id);
         return reply(200, { deleted: id });
       }
     }
@@ -214,7 +195,7 @@ export function createApi({ fault = null } = {}) {
         if (!can(role, 'contacts.create')) return deny();
         const errors = {};
         if (!String(body.name ?? '').trim()) errors.name = 'Contact name is required';
-        if (fault !== 'contact-email' && !EMAIL.test(String(body.email ?? ''))) errors.email = 'A valid email is required';
+        if (!EMAIL.test(String(body.email ?? ''))) errors.email = 'A valid email is required';
         if (Object.keys(errors).length) return invalid(errors);
         const contact = { id: nextId('c'), name: String(body.name).trim(), email: String(body.email ?? ''), accountId: body.accountId ?? null };
         db.contacts.unshift(contact); audit('create', 'contact', contact.id);
@@ -225,7 +206,7 @@ export function createApi({ fault = null } = {}) {
       if (req.method === 'DELETE') {
         if (!can(role, 'contacts.delete')) return deny();
         db.contacts = db.contacts.filter(c => c.id !== id);
-        if (fault !== 'audit-missing-delete') audit('delete', 'contact', id);
+        audit('delete', 'contact', id);
         return reply(200, { deleted: id });
       }
     }
@@ -239,8 +220,8 @@ export function createApi({ fault = null } = {}) {
         const email = String(body.email ?? '').trim();
         if (!String(body.name ?? '').trim()) errors.name = 'Lead name is required';
         if (!email) errors.email = 'Email is required';
-        else if (fault !== 'lead-email-format' && !EMAIL.test(email)) errors.email = 'Enter a valid email address';
-        else if (fault !== 'lead-duplicate' && db.leads.some(l => l.email.toLowerCase() === email.toLowerCase())) errors.email = 'A lead with this email already exists';
+        else if (!EMAIL.test(email)) errors.email = 'Enter a valid email address';
+        else if (db.leads.some(l => l.email.toLowerCase() === email.toLowerCase())) errors.email = 'A lead with this email already exists';
         if (!String(body.source ?? '').trim()) errors.source = 'Lead source is required';
         if (Object.keys(errors).length) return invalid(errors);
         const lead = { id: nextId('l'), name: String(body.name).trim(), email, company: String(body.company ?? ''), source: String(body.source), status: 'open' };
@@ -251,9 +232,9 @@ export function createApi({ fault = null } = {}) {
       if (!lead) return reply(404, { error: 'Not found' });
       if (sub === 'convert' && req.method === 'POST') {
         if (!can(role, 'leads.convert')) return deny();
-        if (lead.status === 'converted' && fault !== 'lead-convert-twice') return reply(409, { error: 'Lead is already converted' });
+        if (lead.status === 'converted') return reply(409, { error: 'Lead is already converted' });
         let account = null;
-        if (lead.company && fault !== 'lead-convert-no-account') {
+        if (lead.company) {
           account = db.accounts.find(a => a.name.toLowerCase() === lead.company.toLowerCase());
           if (!account) { account = { id: nextId('a'), name: lead.company, industry: '', owner: me.id }; db.accounts.unshift(account); }
         }
@@ -266,7 +247,7 @@ export function createApi({ fault = null } = {}) {
       if (req.method === 'DELETE') {
         if (!can(role, 'leads.delete')) return deny();
         db.leads = db.leads.filter(l => l.id !== id);
-        if (fault !== 'audit-missing-delete') audit('delete', 'lead', id);
+        audit('delete', 'lead', id);
         return reply(200, { deleted: id });
       }
     }
@@ -274,7 +255,7 @@ export function createApi({ fault = null } = {}) {
     // ---- opportunities
     if (resource === 'opportunities') {
       const decorate = o => {
-        const prob = fault === 'opp-weighted' && o.stage === 'negotiation' ? 50 : STAGES[o.stage];
+        const prob = STAGES[o.stage];
         return { ...o, probability: prob, weighted: round2(o.value * prob / 100) };
       };
       if (!id && req.method === 'GET') return can(role, 'opportunities.view') ? reply(200, { ...list(db.opportunities, url.searchParams.get('q'), ['name']), items: list(db.opportunities, url.searchParams.get('q'), ['name']).items.map(decorate) }) : deny();
@@ -283,7 +264,7 @@ export function createApi({ fault = null } = {}) {
         const errors = {};
         const value = Number(body.value);
         if (!String(body.name ?? '').trim()) errors.name = 'Opportunity name is required';
-        if (!Number.isFinite(value) || (fault === 'opp-value-negative' ? false : value <= 0)) errors.value = 'Value must be a positive number';
+        if (!Number.isFinite(value) || value <= 0) errors.value = 'Value must be a positive number';
         if (!db.accounts.some(a => a.id === body.accountId)) errors.accountId = 'Choose an account';
         if (Object.keys(errors).length) return invalid(errors);
         const opp = { id: nextId('o'), name: String(body.name).trim(), accountId: body.accountId, value, stage: 'prospecting', owner: me.id };
@@ -295,7 +276,7 @@ export function createApi({ fault = null } = {}) {
       if (sub === 'stage' && req.method === 'POST') {
         if (!can(role, 'opportunities.edit')) return deny();
         if (!(body.stage in STAGES)) return invalid({ stage: 'Unknown stage' });
-        if (body.stage === 'lost' && !String(body.lostReason ?? '').trim() && fault !== 'opp-lost-reason') return invalid({ lostReason: 'A reason is required to close as lost' });
+        if (body.stage === 'lost' && !String(body.lostReason ?? '').trim()) return invalid({ lostReason: 'A reason is required to close as lost' });
         opp.stage = body.stage;
         if (['won', 'lost'].includes(body.stage)) { opp.closedOn = TODAY; if (body.stage === 'lost') opp.lostReason = body.lostReason ?? ''; }
         return reply(200, decorate(opp));
@@ -303,15 +284,15 @@ export function createApi({ fault = null } = {}) {
       if (req.method === 'DELETE') {
         if (!can(role, 'opportunities.delete')) return deny();
         db.opportunities = db.opportunities.filter(o => o.id !== id);
-        if (fault !== 'audit-missing-delete') audit('delete', 'opportunity', id);
+        audit('delete', 'opportunity', id);
         return reply(200, { deleted: id });
       }
     }
 
     // ---- quotes
     if (resource === 'quotes') {
-      const threshold = fault === 'quote-threshold' ? 20 : db.settings.approvalThresholdPct;
-      const decorate = q => ({ ...q, ...quoteTotals(q, fault), needsApproval: q.discountPct > threshold });
+      const threshold = db.settings.approvalThresholdPct;
+      const decorate = q => ({ ...q, ...quoteTotals(q), needsApproval: q.discountPct > threshold });
       if (!id && req.method === 'GET') return can(role, 'quotes.view') ? reply(200, { items: db.quotes.map(decorate), total: db.quotes.length }) : deny();
       if (!id && req.method === 'POST') {
         if (!can(role, 'quotes.create')) return deny();
@@ -339,7 +320,7 @@ export function createApi({ fault = null } = {}) {
       }
       if (sub === 'send' && req.method === 'POST') {
         if (!can(role, 'quotes.send')) return deny();
-        if (quote.status === 'pending-approval' && fault !== 'quote-send-unapproved') return reply(409, { error: 'Quote needs approval before it can be sent' });
+        if (quote.status === 'pending-approval') return reply(409, { error: 'Quote needs approval before it can be sent' });
         if (!['draft', 'pending-approval'].includes(quote.status)) return reply(409, { error: 'Only draft quotes can be sent' });
         quote.status = 'sent';
         return reply(200, decorate(quote));
@@ -354,16 +335,16 @@ export function createApi({ fault = null } = {}) {
 
     // ---- invoices
     if (resource === 'invoices') {
-      const decorate = i => ({ ...i, balance: round2(i.total - i.paid), overdue: fault === 'invoice-overdue' ? false : i.status !== 'paid' && i.dueOn < TODAY });
+      const decorate = i => ({ ...i, balance: round2(i.total - i.paid), overdue: i.status !== 'paid' && i.dueOn < TODAY });
       if (!id && req.method === 'GET') return can(role, 'invoices.view') ? reply(200, { items: db.invoices.map(decorate), total: db.invoices.length }) : deny();
       if (!id && req.method === 'POST') {
         if (!can(role, 'invoices.create')) return deny();
         const quote = db.quotes.find(q => q.id === body.quoteId);
         if (!quote) return invalid({ quoteId: 'Choose a quote' });
-        if (quote.status !== 'accepted' && fault !== 'invoice-from-draft-quote') return reply(409, { error: 'Only accepted quotes can be invoiced' });
-        const n = fault === 'invoice-number' ? 1 : ++db.seq.invoice;
+        if (quote.status !== 'accepted') return reply(409, { error: 'Only accepted quotes can be invoiced' });
+        const n = ++db.seq.invoice;
         const invoice = { id: nextId('i'), number: `INV-2026-${String(n).padStart(4, '0')}`, quoteId: quote.id, accountId: quote.accountId,
-          total: quoteTotals(quote, fault).total, paid: 0, status: 'draft', issuedOn: TODAY, dueOn: '2026-12-15' };
+          total: quoteTotals(quote).total, paid: 0, status: 'draft', issuedOn: TODAY, dueOn: '2026-12-15' };
         db.invoices.unshift(invoice); audit('create', 'invoice', invoice.id);
         return reply(201, decorate(invoice));
       }
@@ -381,21 +362,21 @@ export function createApi({ fault = null } = {}) {
         if (invoice.status === 'draft') return reply(409, { error: 'Send the invoice before recording payments' });
         if (!(amount > 0) || amount > round2(invoice.total - invoice.paid)) return invalid({ amount: 'Amount must be above zero and no more than the balance' });
         invoice.paid = round2(invoice.paid + amount);
-        invoice.status = fault === 'invoice-partial' || invoice.paid >= invoice.total ? 'paid' : 'partially-paid';
+        invoice.status = invoice.paid >= invoice.total ? 'paid' : 'partially-paid';
         return reply(200, decorate(invoice));
       }
     }
 
     // ---- tasks
     if (resource === 'tasks') {
-      const sorted = () => [...db.tasks].sort((a, b) => fault === 'task-sort' ? b.dueOn.localeCompare(a.dueOn) : a.dueOn.localeCompare(b.dueOn))
+      const sorted = () => [...db.tasks].sort((a, b) => a.dueOn.localeCompare(b.dueOn))
         .map(t => ({ ...t, overdue: !t.done && t.dueOn < TODAY }));
       if (!id && req.method === 'GET') return can(role, 'tasks.view') ? reply(200, { items: sorted(), total: db.tasks.length }) : deny();
       if (!id && req.method === 'POST') {
         if (!can(role, 'tasks.create')) return deny();
         const errors = {};
         if (!String(body.title ?? '').trim()) errors.title = 'Title is required';
-        if (fault !== 'task-due-required' && !/^\d{4}-\d{2}-\d{2}$/.test(String(body.dueOn ?? ''))) errors.dueOn = 'Due date is required';
+        if (!/^\d{4}-\d{2}-\d{2}$/.test(String(body.dueOn ?? ''))) errors.dueOn = 'Due date is required';
         if (Object.keys(errors).length) return invalid(errors);
         const task = { id: nextId('t'), title: String(body.title).trim(), dueOn: String(body.dueOn ?? TODAY), assignee: body.assignee ?? me.id, done: false };
         db.tasks.push(task);
@@ -404,7 +385,7 @@ export function createApi({ fault = null } = {}) {
       const task = db.tasks.find(t => t.id === id);
       if (!task) return reply(404, { error: 'Not found' });
       if (sub === 'complete' && req.method === 'POST') {
-        if (task.assignee !== me.id && role !== 'admin' && fault !== 'task-complete-other') return reply(403, { error: 'Only the assignee or an admin can complete this task' });
+        if (task.assignee !== me.id && role !== 'admin') return reply(403, { error: 'Only the assignee or an admin can complete this task' });
         task.done = true;
         return reply(200, task);
       }
@@ -413,8 +394,8 @@ export function createApi({ fault = null } = {}) {
     // ---- reports
     if (resource === 'reports' && id === 'summary' && req.method === 'GET') {
       if (!can(role, 'reports.view')) return deny();
-      const open = db.opportunities.filter(o => fault === 'report-pipeline' ? o.stage !== 'won' : !['won', 'lost'].includes(o.stage));
-      const outstanding = db.invoices.filter(i => i.status !== 'paid').reduce((s, i) => s + (fault === 'report-outstanding' ? i.total : i.total - i.paid), 0);
+      const open = db.opportunities.filter(o => !['won', 'lost'].includes(o.stage));
+      const outstanding = db.invoices.filter(i => i.status !== 'paid').reduce((s, i) => s + (i.total - i.paid), 0);
       return reply(200, {
         pipelineTotal: round2(open.reduce((s, o) => s + o.value, 0)),
         weightedPipeline: round2(open.reduce((s, o) => s + o.value * STAGES[o.stage] / 100, 0)),
@@ -433,7 +414,7 @@ export function createApi({ fault = null } = {}) {
         const email = String(body.email ?? '').trim().toLowerCase();
         const errors = {};
         if (!EMAIL.test(email)) errors.email = 'A valid email is required';
-        else if (fault !== 'user-duplicate-email' && db.users.some(u => u.email === email)) errors.email = 'A user with this email already exists';
+        else if (db.users.some(u => u.email === email)) errors.email = 'A user with this email already exists';
         if (!ROLES.includes(body.role)) errors.role = 'Choose a role';
         if (Object.keys(errors).length) return invalid(errors);
         const user = { id: nextId('u'), email, name: email.split('@')[0], role: body.role, active: true };
@@ -446,7 +427,7 @@ export function createApi({ fault = null } = {}) {
         if (!can(role, 'users.manage')) return deny();
         const admins = db.users.filter(u => u.role === 'admin' && u.active);
         const losesAdmin = user.role === 'admin' && ((body.role && body.role !== 'admin') || body.active === false);
-        if (losesAdmin && admins.length <= 1 && fault !== 'user-last-admin') return reply(409, { error: 'The workspace must keep at least one active admin' });
+        if (losesAdmin && admins.length <= 1) return reply(409, { error: 'The workspace must keep at least one active admin' });
         if (body.role !== undefined) { if (!ROLES.includes(body.role)) return invalid({ role: 'Choose a role' }); user.role = body.role; }
         if (body.active !== undefined) user.active = Boolean(body.active);
         audit('update', 'user', user.id);

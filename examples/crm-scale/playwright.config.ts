@@ -16,7 +16,7 @@ export default defineConfig({
   projects: [{ name: 'chromium', use: { ...devices['Desktop Chrome'] } }],
   webServer: {
     command: `"${process.execPath}" app/server.mjs`,
-    env: { PORT: port, ...(process.env.CRM_SCALE_FAULT ? { CRM_SCALE_FAULT: process.env.CRM_SCALE_FAULT, CRM_SCALE_BENCHMARK: '1' } : {}) },
+    env: { PORT: port },
     url: `${baseURL}/login`,
     reuseExistingServer: false,
     timeout: 20_000

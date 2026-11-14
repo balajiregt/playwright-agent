@@ -1,4 +1,4 @@
-// CRM-Scale server. Faults require CRM_SCALE_BENCHMARK=1 and a known CRM_SCALE_FAULT.
+// CRM-Scale server: the JSON API plus the single-page app's static files.
 import http from 'node:http';
 import fs from 'node:fs/promises';
 import path from 'node:path';
@@ -7,9 +7,7 @@ import { createApi } from './api.mjs';
 
 const publicDir = path.join(path.dirname(fileURLToPath(import.meta.url)), 'public');
 const port = Number(process.env.PORT ?? 4300);
-const fault = process.env.CRM_SCALE_FAULT || null;
-if (fault && process.env.CRM_SCALE_BENCHMARK !== '1') throw new Error('Faults require CRM_SCALE_BENCHMARK=1');
-const api = createApi({ fault });
+const api = createApi();
 const types = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.css': 'text/css; charset=utf-8' };
 
 http.createServer(async (req, res) => {
@@ -23,4 +21,4 @@ http.createServer(async (req, res) => {
   } catch {
     res.writeHead(404, { 'content-type': 'text/plain' }); res.end('Not found');
   }
-}).listen(port, '127.0.0.1', () => console.log(`CRM-Scale on http://127.0.0.1:${port}${fault ? ` (fault: ${fault})` : ''}`));
+}).listen(port, '127.0.0.1', () => console.log(`CRM-Scale on http://127.0.0.1:${port}`));

@@ -45,16 +45,8 @@ and full payments, overdue status; tasks ordered by due date with overdue status
 and assignee-only completion; report figures; user invitations, role changes, the
 last-admin guard and deactivation; settings; and the audit trail.
 
-## Benchmark faults
+## Using it as a benchmark
 
-`app/api.mjs` exports `FAULTS`, named switches at the exact rule sites (for example
-`quote-rounding`, `invoice-partial` or `user-last-admin`). A fault is enabled only
-in benchmark mode:
-
-```sh
-CRM_SCALE_BENCHMARK=1 CRM_SCALE_FAULT=quote-rounding node examples/crm-scale/app/server.mjs
-CRM_SCALE_FAULT=quote-rounding npx playwright test -c examples/crm-scale/playwright.config.ts
-```
-
-Faults are used to prove which requirements a test suite really protects. They
-are never enabled outside benchmark runs.
+The application contains no fault switches, so it behaves like an ordinary product.
+Benchmarks that need a faulty version patch a disposable copy and never change this
+source.
