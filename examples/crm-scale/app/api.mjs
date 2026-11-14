@@ -57,7 +57,8 @@ function seed() {
       { id: 'o2', name: 'Contoso expansion', accountId: 'a2', value: 80000, stage: 'proposal', owner: 'u2' },
       { id: 'o3', name: 'Fabrikam pilot', accountId: 'a3', value: 20000, stage: 'prospecting', owner: 'u3' },
       { id: 'o4', name: 'Northwind add-on', accountId: 'a1', value: 15000, stage: 'won', owner: 'u3', closedOn: '2026-10-20' },
-      { id: 'o5', name: 'Legacy migration', accountId: 'a2', value: 50000, stage: 'lost', owner: 'u2', lostReason: 'Budget', closedOn: '2026-09-02' }
+      { id: 'o5', name: 'Legacy migration', accountId: 'a2', value: 50000, stage: 'lost', owner: 'u2', lostReason: 'Budget', closedOn: '2026-09-02' },
+      { id: 'o6', name: 'Contoso pilot', accountId: 'a2', value: 30000, stage: 'won', owner: 'u3', closedOn: '2026-09-15' }
     ],
     quotes: [
       { id: 'q1', number: 'Q-1001', accountId: 'a1', opportunityId: 'o1', lines: [{ item: 'Licences', qty: 10, unitPrice: 1000 }], discountPct: 5, status: 'accepted' },
