@@ -153,7 +153,7 @@ export function createApi() {
       return { items: filtered.slice((page - 1) * size, page * size), total: filtered.length, page, pageSize: size };
     };
 
-    if (resource === 'me') return reply(200, { email: me.email, name: me.name, role, permissions: permissionsFor(role), today: TODAY, settings: db.settings });
+    if (resource === 'me') return reply(200, { id: me.id, email: me.email, name: me.name, role, permissions: permissionsFor(role), today: TODAY, settings: db.settings });
 
     // ---- accounts
     if (resource === 'accounts') {
