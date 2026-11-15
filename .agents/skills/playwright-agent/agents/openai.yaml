@@ -1,4 +1,4 @@
 interface:
   display_name: "Playwright Agent"
-  short_description: "Create tests and assess acceptance with evidence"
-  default_prompt: "Use $playwright-agent for the selected feature and supplied requirements; inspect existing coverage before making changes."
+  short_description: "Route focused functional Playwright tasks"
+  default_prompt: "Use $playwright-agent for this project and route only the work requested in my prompt."

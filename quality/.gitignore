@@ -8,13 +8,10 @@ contexts/*.local.yml
 .DS_Store
 
 node_modules
-benchmark-results/
-benchmarks/dashboard/__pycache__/
 .venv/
 __pycache__/
 *.pyc
 
-decision-bench.config.local.json
 .playwright-cli/
 output/
 

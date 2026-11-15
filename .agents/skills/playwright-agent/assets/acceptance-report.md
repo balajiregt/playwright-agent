@@ -1,5 +1,8 @@
 # Playwright task assessment
 
+Use for explicitly requested coverage/matrix assessment. Ordinary authoring uses
+task findings and actual verification reports without requiring this matrix.
+
 - Request and mode:
 - Selected repository and source revision/working-tree state:
 - Requirement source files/quotations and intake/draft version, if used:
@@ -27,12 +30,18 @@ and action references in this analysis instead of inventing a parallel schema.
 
 ## Optional analysis
 
-- Decision provider: not run unless requested. Record provider/version and
-  evidence references; decisions are advisory, not observed acceptance.
+- Claim checks: not run unless requested. Record the agent's judgment with
+  evidence references; judgments are advisory, not observed acceptance.
 - Mutation sensitivity: not run unless requested. Record activated faults,
   killed/survived/inconclusive outcomes, baselines and restored-green evidence.
 
 ## Outcome
+
+For a requested evaluation scorecard, use [the evaluation report](../../../../docs/evaluation-reports.md).
+Record each rule, expected and observed value, evidence, binary points and reason.
+Show expected/scored/unscored denominators. Keep actual provider probabilities,
+model/version and request provenance separate. Missing reference answers stay
+unreviewed; agreement with another model is not the reference answer.
 
 State which requested criteria are supported by which observed checks, which
 remain unresolved, changed files, skipped gates and the next concrete blocker.

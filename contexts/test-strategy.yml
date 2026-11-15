@@ -12,17 +12,13 @@ testing_pyramid:
   auth:
     tags: ["@auth"]
     goal: "Authentication, authorization, and session reuse coverage."
-  accessibility:
-    tags: ["@accessibility"]
-    goal: "User-facing semantics and accessibility-visible behavior."
-  visual:
-    tags: ["@visual"]
-    goal: "Stable visual checkpoints when the project explicitly owns baselines."
   api_setup:
     tags: ["@api-setup"]
     goal: "Backend setup that supports UI flows without replacing UI assertions."
 
 authoring_rules:
+  - "Functional Playwright authoring is the normal task; nonfunctional testing is outside this agent's scope."
+  - "Formal acceptance/matrix assessment and mutation verification run only when explicitly requested."
   - "Specs describe behavior; page objects own locators/actions; assertions own repeated expectations."
   - "Fixtures instantiate page objects and share auth/context setup."
   - "Use accessible locators first, then stable test ids, then page-object wrappers."

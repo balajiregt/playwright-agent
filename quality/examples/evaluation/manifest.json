@@ -1,0 +1,184 @@
+{
+  "version": 1,
+  "taskId": "SYNTHETIC-EVAL-EXAMPLE",
+  "title": "Fictional functional evaluation example",
+  "scope": "Synthetic demonstration only. These are not recorded application or agent results.",
+  "evidenceKind": "synthetic",
+  "evidence": [
+    {
+      "id": "observed",
+      "file": "quality/examples/evaluation/evidence.json",
+      "sha256": "f5f56dfc0d52ebf2d316908bfd3e0cb36fe0c46819fc698da311f297ee8531bd"
+    },
+    {
+      "id": "reference",
+      "file": "quality/examples/evaluation/reference.md",
+      "sha256": "537dac3c64b29988f872092341c0d56f5962c21e5af91fc978904b1a8acb18db"
+    }
+  ],
+  "cases": [
+    {
+      "id": "ASSESSMENT",
+      "capability": "acceptance_assessment",
+      "dimension": "Match the fictional reviewed expected label",
+      "request": "Evaluate the selected acceptance_assessment task.",
+      "expectedOutcome": "Match the fictional reviewed expected label",
+      "execution": "recorded",
+      "reference": {
+        "status": "reviewed",
+        "reviewedBy": "Synthetic fixture contract; not independent review",
+        "evidenceIds": [
+          "reference"
+        ]
+      },
+      "checks": [
+        {
+          "id": "label",
+          "rule": "Finding matches the fictional expected label.",
+          "operator": "equal",
+          "expected": "covered",
+          "observed": {
+            "evidenceId": "observed",
+            "pointer": "/assessment/label"
+          }
+        }
+      ]
+    },
+    {
+      "id": "MATRIX",
+      "capability": "test_matrix",
+      "dimension": "All four fictional criteria have trace links",
+      "request": "Evaluate the selected test_matrix task.",
+      "expectedOutcome": "All four fictional criteria have trace links",
+      "execution": "recorded",
+      "reference": {
+        "status": "protocol",
+        "reviewedBy": "Synthetic fixture contract; not independent review",
+        "evidenceIds": [
+          "reference"
+        ]
+      },
+      "checks": [
+        {
+          "id": "linked",
+          "rule": "Linked criterion count meets the inventory.",
+          "operator": "at_least",
+          "expected": 4,
+          "observed": {
+            "evidenceId": "observed",
+            "pointer": "/matrix/linked"
+          }
+        }
+      ]
+    },
+    {
+      "id": "AUTHORING",
+      "capability": "test_authoring",
+      "dimension": "Focused suite passes and old assertions remain",
+      "request": "Evaluate the selected test_authoring task.",
+      "expectedOutcome": "Focused suite passes and old assertions remain",
+      "execution": "recorded",
+      "reference": {
+        "status": "protocol",
+        "reviewedBy": "Synthetic fixture contract; not independent review",
+        "evidenceIds": [
+          "reference"
+        ]
+      },
+      "checks": [
+        {
+          "id": "run",
+          "rule": "Focused result is passed.",
+          "operator": "equal",
+          "expected": "passed",
+          "observed": {
+            "evidenceId": "observed",
+            "pointer": "/authoring/focusedSuite"
+          }
+        },
+        {
+          "id": "preserve",
+          "rule": "Old assertions preserved.",
+          "operator": "equal",
+          "expected": true,
+          "observed": {
+            "evidenceId": "observed",
+            "pointer": "/authoring/oldAssertionsPreserved"
+          }
+        }
+      ]
+    },
+    {
+      "id": "MUTATION",
+      "capability": "mutation_verification",
+      "dimension": "Mutation protocol evidence is recorded",
+      "request": "Evaluate the selected mutation_verification task.",
+      "expectedOutcome": "Mutation protocol evidence is recorded",
+      "execution": "recorded",
+      "reference": {
+        "status": "protocol",
+        "reviewedBy": "Synthetic fixture contract; not independent review",
+        "evidenceIds": [
+          "reference"
+        ]
+      },
+      "checks": [
+        {
+          "id": "baselines",
+          "rule": "At least two healthy baselines.",
+          "operator": "at_least",
+          "expected": 2,
+          "observed": {
+            "evidenceId": "observed",
+            "pointer": "/mutation/baselines"
+          }
+        },
+        {
+          "id": "active",
+          "rule": "Independent probe activates the fault.",
+          "operator": "equal",
+          "expected": true,
+          "observed": {
+            "evidenceId": "observed",
+            "pointer": "/mutation/activated"
+          }
+        },
+        {
+          "id": "restore",
+          "rule": "Restoration is healthy.",
+          "operator": "equal",
+          "expected": true,
+          "observed": {
+            "evidenceId": "observed",
+            "pointer": "/mutation/restored"
+          }
+        }
+      ]
+    },
+    {
+      "id": "ROUTING",
+      "capability": "skill_routing",
+      "dimension": "Only the requested authoring skill is selected",
+      "request": "Evaluate the selected skill_routing task.",
+      "expectedOutcome": "Only the requested authoring skill is selected",
+      "execution": "not_run",
+      "reference": {
+        "status": "pending_review",
+        "reviewedBy": "Synthetic fixture contract; not independent review",
+        "evidenceIds": [
+          "reference"
+        ]
+      },
+      "checks": [
+        {
+          "id": "skill",
+          "rule": "Selected skill list matches the request.",
+          "operator": "equal",
+          "expected": [
+            "playwright-test-authoring"
+          ]
+        }
+      ]
+    }
+  ]
+}

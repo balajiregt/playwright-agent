@@ -30,11 +30,19 @@ export interface MutationReportView {
  faults:{id:string;requirementId:string;criterion:string;description:string;status:string;reason?:string;baselineProbe?:string;mutantProbe?:string;killingTests:string[];killingTestCount:number;attempts:ExecutionSummary[]}[];
  limitations:string[];
 }
+export interface CoverageReportView {
+ id:string;kind:'coverage';name:string;importedAt:string;recordedAt:string|null;roles:string[];testsIndexed:number;
+ counts:{criteria:number;flagged:number;noCandidate:number;roleRules:number};
+ rows:{id:string;criterion:string;flags:string[];candidates:{ref:string;title:string;roles:string[];negative:boolean}[];
+  roleChecks:{role:string;expected:'allowed'|'denied';checkedBy:string|null}[]}[];
+ limitations:string[];
+}
 export interface PortalTaskDetail {
  taskId:string;runs:{id:string;createdAt:string;goal:string}[];run:PortalRun|null;
- reports:{tests:TestReportView[];mutations:MutationReportView[]};
+ analysis?:AgentAnalysis;
+ reports:{tests:TestReportView[];mutations:MutationReportView[];coverage:CoverageReportView[]};
 }
 export interface PortalTaskSummary {
  id:string;updatedAt:string|null;runId:string|null;status:string;
- criteria:number;openQuestions:number;sources:number;testReports:number;mutationReports:number;
+ criteria:number;openQuestions:number;sources:number;testReports:number;mutationReports:number;coverageReports:number;
 }

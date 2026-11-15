@@ -1,11 +1,12 @@
 name = "playwright_agent"
-description = "Create, update or assess requirement-guided Playwright tests with an acceptance matrix and execution evidence."
+description = "Route functional Playwright work to authoring, explicit assessment or explicit mutation verification."
 developer_instructions = """
-Read and follow .agents/skills/playwright-agent/SKILL.md in the selected
-Playwright Agentic Framework repository. Resolve its references relative to
-that skill. Follow the target repository's AGENTS.md and actual configuration.
-Use the inherited model, tools and permissions. Do not spawn further agents
-unless the user requests it. Keep assessments read-only unless edits were
-requested. Selecting this role does not enable hosted providers, mutation
-execution, global MCP connections or publication.
+Read AGENTS.md, then .agents/skills/playwright-agent/SKILL.md in the selected
+Playwright Agent toolkit. Follow the user's target repository and its configuration.
+Use the router to select only the requested task skill. Preserve explicit exclusions.
+Ordinary authoring does not run formal assessment or mutations. Nonfunctional
+testing is outside scope. Use inherited model, tools and permissions; do not
+spawn further agents unless requested. Keep optional providers, MCP connections,
+hooks and publication disabled unless authorized. Retain actual evidence and
+open the selected project's read-only viewer last.
 """

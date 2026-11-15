@@ -21,11 +21,9 @@ active ticket. Root `npm run quality:context` resolves that fixture only.
 
 The bundled [CRM-DEMO-001 epic](tasks/CRM-DEMO-001/epic.md),
 [synthetic tickets](tasks/CRM-DEMO-001/jira-tickets.json) and
-[normalized requirements](tasks/CRM-DEMO-001/requirements.json) are tracked here
-and included in the community ZIP. They are authored demonstration material;
-this folder is their single source. `npm run demo:prepare` validates the fixture
-without copying or overwriting documents. Only these three reviewed files are
-shared; other files in that folder and all other work items remain ignored.
+[normalized requirements](tasks/CRM-DEMO-001/requirements.json) are tracked here.
+They are authored demonstration material; this folder is their single source.
+Only these three reviewed files are shared; other files in that folder and all other work items remain ignored.
 
 Keep private tickets, epics and PRDs in one selected
 `contexts/tasks/<work-item>/` folder. Pass the existing requirements file
@@ -45,6 +43,13 @@ implementation-derived behaviour must not become an unqualified business rule.
 
 The workspace's shared UI resolver targets the separate role-aware mockserver;
 it is not required to run this product and must not redirect this task there.
+
+## Evaluating the product on an existing project
+
+Keep the target's requirements in that target's local task context. The current
+workspace role-test comparison uses the mockserver-owned
+`contexts/tasks/UI-ROLE-AGENT-COMPARISON-001.yml`; do not copy it into this
+product's task folder or replace its reusable app maps with mockserver facts.
 
 ## Selected local documents
 

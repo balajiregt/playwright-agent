@@ -23,26 +23,15 @@ quotes in **13.69 seconds**, using 17,742 input and 578 output tokens. It used
 the CLI default model; no resolved model name was emitted, and actual cost is
 unavailable. The plan and usage records remain local.
 
-Laya 0.4.12, pinned revision `7b928d828b7b0e022f929d9bd2e44165aa270148`,
-ran on **MPS** with PyTorch 2.15.0 / Python 3.15.2. It completed **21/21**
-test/fault predictions with zero exclusions/errors in **40.09 seconds**, including
-**7.52 seconds** startup. It predicted detection for every pair; only **2/21**
-matched observed assertion detection. The other 19 test/fault pairs passed.
-These correlated, imbalanced examples are not a general accuracy benchmark.
-The result does not support using Laya to approve or skip fault execution.
+This run also recorded retired model-prediction research; that part is omitted
+here (the original record is kept in the local recovery archive). Only the
+observed Playwright outcomes below count as detection evidence.
 
 The first campaign retained two inconclusive results because the assertion wait
 and test timeout expired together. After giving assertions a shorter timeout,
 the complete baseline/mutant/restoration sequence was rerun. Earlier artifacts
 were retained; their results were not relabelled as successful detections.
 
-The optional UTCP adapter passed both classic-versus-Code-Mode result equivalence
-and an actual MCP → Code Mode → local mutation MCP round trip, reading the same
-three planned criteria/faults. It was not a measured model-token-savings trial.
-The default Codex CLI then successfully called the bridge's `interfaces` and
-`call_tool_chain` tools in read-only mode, batching context and plan inspection
-and returning three criteria/three faults in 17.13 seconds. That connectivity
-check's usage record stays local; it is not an MCP-versus-Code-Mode benchmark.
 The final installed root and optional dependency sets audited clean.
 
 Verification: TypeScript checking, 72 offline/unit/integration tests, required

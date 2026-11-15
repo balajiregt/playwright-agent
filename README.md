@@ -1,695 +1,198 @@
 # Playwright Agent
 
-Repository: [balajiregt/playwright-agent](https://github.com/balajiregt/playwright-agent) (formerly `playwright-harness-framework`).
+AI coding agents can now write Playwright tests quickly. Playwright Agent answers
+the questions that remain once they have:
 
-## Start in your coding chat
+1. **Do the tests cover the intended acceptance criteria?** Requirements from
+   tickets, epics, PRDs and RTM exports become source-linked criteria; each one
+   is checked against the actual test bodies and assertions, not test names.
+2. **Is the traceability matrix complete?** Criteria map to scenario, test,
+   assertion and runtime evidence, with gaps and unknowns kept visible.
+3. **Do the assertions actually catch defects?** Reviewed behavioral faults run
+   against the real application in disposable copies; a fault the suite misses
+   is a concrete test gap.
 
-Attach the ticket and supporting documents, identify your existing project and
-ask `$playwright-agent` to **create**, **update** or **assess** tests. The agent
-reviews source-linked criteria and ambiguities in chat, inspects assertions,
-performs the requested test work and saves actual evidence. It opens the selected
-task in the read-only report viewer last, including incomplete or blocked work.
-Authoring and execution use that same host session's tools.
+![Playwright Agent: a router skill loads one skill, which hands repeatable work to a tool](docs/diagrams/playwright-agent-overview.svg)
 
-```text
-Use $playwright-agent in my existing project for LOGIN-123.
-Use the attached requirements to create the missing login tests.
-Review the criteria and questions with me in chat, inspect existing assertions,
-make the focused changes and run the relevant checks.
-Save the matrix, findings and actual reports, then open the report viewer.
-Show unclear requirements before treating them as accepted criteria.
-```
+Use your existing coding agent, project and test framework.
+**New here? Follow the [step-by-step onboarding guide](docs/getting-started.md).**
+Repository: [balajiregt/playwright-agent](https://github.com/balajiregt/playwright-agent).
 
-The agent can consume attachments only when the host exposes their local files
-or text. It reports unavailable attachments instead of claiming to have read
-them. [Document intake](docs/document-intake.md) explains source preservation and
-the separate review needed to accept an interpretation.
+**History:** this repository began as the Agentic Playwright Harness
+(`playwright-harness-framework`; that code is tagged
+[`harness-v1`](https://github.com/balajiregt/playwright-agent/tree/harness-v1)).
+Paired trials showed its long instructions added little to Claude Opus, so it was
+rebuilt around deterministic tools. See [the evidence](docs/evidence.md).
 
-## Inspect saved results
+## Start with your prompt
 
-```sh
-npm run portal -- serve --repo /path/to/your-playwright-project --task LOGIN-123
-```
+Use $playwright-agent in your coding chat, or select Playwright Agent in Copilot.
+The router reads your request and exclusions, then loads only the relevant skill.
 
-Open the printed loopback URL to inspect saved documents, criteria, traceability,
-analysis and recorded test/mutation reports. The portal provides detail views,
-filters and downloads. Intake, criterion review/acceptance, test editing and
-execution stay in the native chat and existing CLIs. The [viewer guide](docs/portal.md)
-covers evidence recording and inspection.
+| Request | Workflow |
+| --- | --- |
+| Create, edit, fix or execute tests | Test authoring → focused project checks → report |
+| Assess acceptance criteria, test matrices, gaps or duplicates | Explicit assessment → evidence-linked findings → report |
+| Verify assertion sensitivity using application faults | Explicit mutation verification → activation/execution/restoration evidence → report |
+| Create tests and run mutation verification | Authoring → healthy tests → frozen-test mutation campaign → report |
 
-Workflow accuracy, setup effort, review cost and usability still require
-[comparison validation](docs/workflow-validation.md). Runtime/unit checks alone
-do not establish those outcomes.
+Ordinary test changes do not trigger formal assessment, a traceability matrix,
+mutation testing or extra models. Run-only requests do not authorize repairs.
+Assessment-only work leaves source/tests unchanged and executes checks only when
+requested. Nonfunctional testing is outside this agent's scope.
 
-> One workflow for requirement-guided Playwright test creation, acceptance
-> assessment and mutation verification. The existing harness supplies framework
-> conventions; the internal quality module supplies evaluation and reporting.
+Examples:
 
-![Graph metrics](docs/blog/assets/graph-metrics.png)
+- "Create the missing login tests from this ticket. Run the focused suite."
+- "Fix this locator using the existing page object. No assessment or mutation."
+- "Assess these tests against the acceptance criteria; do not change or run them."
+- "Run mutation verification for this reviewed fault plan; keep tests unchanged."
 
-## Use the agent
+Judgments are made by your coding agent's current model; no extra model, API key
+or hosted provider is used. [Routing and prompts](docs/playwright-agent.md) ·
+[Canonical router](.agents/skills/playwright-agent/SKILL.md).
 
-Use `$playwright-agent` in Codex, or select **Playwright Agent** from Copilot's
-custom-agent dropdown. The shared workflow creates, updates or assesses tests
-against supplied requirements, builds an acceptance matrix, reuses existing
-coverage and reports actual verification evidence. A named Codex custom agent
-is available for explicit delegation as well.
+## Does it help? Measured, not claimed
 
-[Agent setup, prompts and context-folder responsibilities](docs/playwright-agent.md)
-explain the native entry points. Decision providers and the existing Code Mode /
-mutation integration are optional; selecting the agent does not run a benchmark,
-publish results, connect global servers or require another runtime.
+Each task ran twice with Claude Opus 5.5 on the same copy of
+[CRM-Scale](examples/crm-scale/) (11 modules, 5 roles, 216 tests, 90 criteria):
+once alone with all agent guidance removed, once with Playwright Agent. An
+independent oracle scored both, under rules frozen before any run.
 
-## Configure it for your existing project
+![How the value is measured](docs/diagrams/how-it-is-measured.svg)
 
-Download the source ZIP or clone this repository once as your local toolkit.
-Your coding agent continues to work in your own Playwright project and reuse its
-existing tests, fixtures, page objects and configuration.
+![Results: assessment shows no measurable difference; mutation proof adds safety](docs/diagrams/results-crm-scale.svg)
 
-From this toolkit directory:
+- **Mutation proof: adds value.** Opus alone reached the right verdict too (11/12),
+  but edited the real application in all 12 runs. With `npm run mutate`, 12/12
+  correct and the original never touched.
+- **Assessment: no measurable difference.** 97.0% vs 93.6% gap recall, short of
+  the +10-point margin set in advance. Opus is already strong at reading tests.
+- **Authoring:** tied 4/4 in the earlier run, so it was not re-run.
+- **Cost:** level. An earlier, longer-prompt version cost more in 11 of 15 pairs;
+  shortening the guidance and moving work into tools removed that overhead.
 
-```sh
+Limits: one model, one synthetic app, 27 pairs. Method, full results and every
+disclosed deviation: [evidence](docs/evidence.md). Rerun the paired method before
+relying on it for a different stack.
+
+## Configure an existing project once
+
+Keep this clone or extracted source ZIP as a local toolkit. Your tests,
+configuration, page objects and fixtures stay in the adopting repository.
+
+~~~sh
 npm ci
 npm ci --prefix quality
 npm run agent:configure -- --repo /path/to/your-playwright-project --client both
-```
+~~~
 
-The command adds small project-local discovery shims for Codex and/or Copilot,
-a private relative-path configuration, and its ignore entry. It preserves your
-project's instructions and tests; existing conflicting files are never overwritten.
-Restart your coding-agent session to refresh discovery. Then use `$playwright-agent`
-in Codex or select **Playwright Agent** in Copilot and identify your ticket context.
+The target must already declare @playwright/test and contain a Playwright config.
+Use --playwright-config for another existing config path. Onboarding creates
+project-local skill shims and/or a Copilot entrypoint, plus an ignored relative
+toolkit configuration. It does not install a framework, select a task, run tests,
+or overwrite conflicting files. Existing adopters must review changed shims
+before replacing them; reconfiguration never overwrites them. Restart the client
+session to refresh discovery. [Adoption and setup](docs/adoption.md).
 
-One workflow supports **write/update tests**, **acceptance review**, **test matrices**,
-**duplicate-test review**, and **behavioral mutation testing**. Ordinary authoring
-uses the host coding agent's native tools. Optional Code Mode exposes the bounded
-quality tools; it is not a separate test-writing model. Mutation work additionally
-needs a trusted local application, allowed source files and a configured observation
-probe. Static duplicate candidates require review before changing tests.
+Then add the evidence reporter beside your existing reporters, so every run is
+saved and the HTML report is rebuilt:
 
-[Adoption guide](docs/adoption.md) · [Task context and prompts](docs/playwright-agent.md).
-The community source ZIP excludes private task inputs, credentials, dependencies
-and local reports. The synthetic CRM demo and run evidence are supporting material.
+~~~ts
+reporter: [['list'], ['../playwright-agent/reporter/index.mjs', { task: 'LOGIN-123' }]],
+~~~
 
-## Start with the tester's documents
+## Supply only the context needed
 
-Supply downloaded tickets, technical PDFs, flow documents and Excel RTMs to the
-agent in chat. The
-[document-intake workflow](docs/document-intake.md) preserves selected
-originals, extracts page/sheet/row evidence and drafts structured criteria. The
-agent handles JSON and column mapping; the tester reviews the meaning and gaps.
-Free-form documents need source-linked agent drafting. Scans and diagrams that
-cannot be read stay flagged for clarification.
+A clear prompt or selected requirement file needs no task card or intake UUID.
+For a larger ticket, keep private inputs in the target project's
+contexts/tasks/WORK-ITEM/ folder. Attach supporting documents in chat when the
+host exposes their local files or text.
 
-```sh
-npm run intake -- prepare --repo /path/to/your-project --task LOGIN-123 --goal assess --file /path/to/jira-export.csv --file /path/to/traceability.xlsx
-```
+Use [document intake](docs/document-intake.md) when PDFs, Jira exports or
+spreadsheets need extraction and source-linked interpretation. The agent handles
+structured formatting; the tester reviews ambiguities and any exact normalized
+interpretation before acceptance. Intake is not a mandatory authoring phase.
 
-The command returns a private run folder with source segments, draft criteria,
-a readable review and an initial matrix. Review and acceptance are explicit
-separate steps. Accepted requirements keep the existing QA schema and include a
-provenance sidecar. This local workflow uses the host coding agent and existing
-parsers; it does not start another model, run tests or publish documents.
+For a focused check of whether one test's assertion proves one criterion, use
+[requirement-to-assertion claims](docs/claim-evidence.md) (`npm run claims`).
 
-## One product, shared capabilities
+## Inspect saved outcomes
 
-| Capability | Implementation owner |
-| --- | --- |
-| Task context, planning and test creation/update | Native Playwright Agent workflow and existing framework layers |
-| Acceptance matrix and coverage review | Agent workflow plus `quality/src/team` evidence/assessment modules |
-| Behavioral mutation execution and reports | `quality/src/mutation` |
-| Optional Laya, Jev and other configured decisions | `quality` adapters; advisory results remain separate from observed execution |
-| Read-only local report viewer | `quality/src/portal`; saved analysis, matrix, documents and actual test/mutation reports |
-| Historical model comparisons and pilots | Retained protocols and fixtures inside `quality`; active reports belong to this product |
+The reporter attaches each Playwright run automatically. Save findings or a
+mutation campaign, then rebuild the report:
 
-```sh
-npm ci
-npm ci --prefix quality
-npm run qa -- help
-npm run mutation -- help
-npm run quality:typecheck
-npm run quality:test
-```
+~~~sh
+npm run portal -- analysis --repo /path/to/your-project --task LOGIN-123 --file /path/to/findings.md
+npm run portal -- attach --repo /path/to/your-project --task LOGIN-123 --kind mutation --file /path/to/campaign.json
+npm run report -- --repo /path/to/your-project [--task LOGIN-123] [--serve]
+~~~
 
-[Quality module](quality/README.md) · [Consolidation and preserved history](docs/playwright-agent-consolidation.md).
-The existing `npm test` still runs browser tests. Quality tests are separate
-checks within the same product; neither command implicitly starts model inference
-or publishes metrics. Config/report paths passed to root commands resolve from
-the caller's working directory.
+`report` writes a self-contained `playwright-agent-report/index.html` (private,
+Git-ignored); `--serve` also opens the local read-only viewer. For an existing
+intake interpretation, add --run UUID to bind assessment findings to that exact
+version. The viewer cannot upload, edit, approve or execute work.
+[Report viewer](docs/portal.md).
 
-## Reproduce the evidence demo
+## Harness conventions and legacy discovery graph
 
-The bundled CRM demonstration includes authored synthetic epic/ticket documents,
-one new invalid-login test, real MCP/Code Mode checks and two independently
-observed behavioral mutations. It deliberately retains one metric-value assertion
-gap so a green browser suite cannot be mistaken for complete acceptance.
+Reuse the target's framework layers, auth setup and helpers. Prefer semantic
+locators, web-first assertions, focused changes and actual execution evidence.
+The original [harness guide](docs/agent-workflow.md) covers specs, captures,
+page objects, fixtures, debugging and evidence. MCP and official Playwright
+agents are optional tool choices after task routing.
 
-Use **Node 22.23.4** for the full demonstration and native Code Mode. This does not
-change the workspace's default runtime. From the product root:
+The source/test/coverage/duplicate graph (`npm run graph:view`) is a legacy
+discovery demo for the small sample CRM. Its "coverage" means a route or capture
+is mentioned by a test; it does not check criteria, roles or assertions. For
+acceptance coverage use `coverage:matrix` and the report's Coverage index tab. Existing sample graph
+commands use the CRM adapter. Configure the generic scanner or your own source
+manifest for a different application; do not run the sample as project validation.
 
-```sh
-npm ci
-npm ci --prefix quality
-npm ci --prefix quality/integrations/code-mode --ignore-scripts=false
-npx playwright install chromium
-npm run demo:prepare
-npm run demo:verify
-npm run demo:package
-```
+~~~sh
+npm run source:manifest -- --root=/path/to/app --output=source-manifest.json
+~~~
 
-The native Code Mode dependency needs its normal compiler prerequisites when a
-prebuilt binary is unavailable. The repository normally disables dependency
-install scripts; the explicit override above applies only to this optional
-integration. No model, global MCP entry or autonomous hook is installed.
+For the bundled CRM demonstration, npm run graph:view refreshes its sample
+manifest and graphs. External projects must select their own manifest and sync
+configuration as described in the harness guide.
 
-[Demo walkthrough](examples/validation-demo/README.md) explains the six-test gate,
-source/test/coverage graphs, tool receipts, mutation evidence and limitations.
-Reports and screenshots remain under ignored `artifacts/validation-demo/`.
-The source ZIP and its hash manifest are written under ignored `artifacts/releases/`.
-The synthetic [CRM-DEMO-001 task](contexts/tasks/CRM-DEMO-001/epic.md) is tracked
-in Git and included in that ZIP; other task inputs remain private and ignored.
-Live Codex planning and local Laya assessment are separate opt-in verification
-flags; the default demo uses an authored fault catalogue and real Playwright
-execution without extra inference.
+![Example graph metrics](docs/assets/graph-metrics.png)
 
-## Published validation findings
+## Quality tools
 
-[Community validation findings](docs/community-validation.md) contains the reviewed
-acceptance matrix, MCP audit, mutation outcomes and graph/duplicate review for the
-31 October 2026 synthetic release. The
-[Playwright Agent platform page](https://framework-benchmarks-balaji.netlify.app/projects/agentic-playwright)
-displays reviewed aggregate results. Private task documents and raw tool logs stay local.
-
-Prepare an existing successful demo run for review without rerunning it:
-
-```sh
-npm run demo:export -- --evidence artifacts/validation-demo/YOUR_RUN --output artifacts/prepared-demo-metrics.json
-```
-
-Export validates the saved browser, tool, frozen workload, mutation and graph
-receipts. It preserves the observation timestamp and reports partial acceptance
-when a required assertion is missing. Skipped model checks remain unavailable.
-Publishing is a separate authorised `$platform-publish` step using
-`examples/validation-demo/platform-policy.json`; export does not publish.
-
-For a real ticket, select `contexts/tasks/<work-item>/` and ask the agent to
-produce criterion → scenario/role/state → test/assertion → assessment/action →
-runtime evidence. The agent reviews source and assertions, creates or updates
-tests when requested, then records execution. Mutation sensitivity and static
-duplicate candidates provide additional evidence. This workflow needs a fresh
-review for each project; the synthetic matrix is not a general acceptance engine.
-
-## What This Project Does
-
-```mermaid
-flowchart LR
-  A[Prompted test flow] --> B[Harness instructions]
-  B --> C[Context graph]
-  C --> D[Flow spec]
-  D --> E[Framework layers]
-  E --> F[Playwright test]
-  F --> G[CLI verification]
-  G --> H[Evidence review]
-  H --> I[Stable team-standard test]
-
-  C --> J[Capture workflow]
-  J --> K[playwright-cli captures]
-  C --> L[Source-aware graph]
-  L --> M[Coverage gaps]
-  L --> N[Duplicate risks]
-```
-
-This harness helps teams turn plain-English test prompts into Playwright tests
-that follow the same project rules every time.
-
-## Why It Exists
-
-```mermaid
-flowchart TD
-  A[AI can generate tests] --> B{But will every test follow team standards?}
-  B -->|Without harness| C[Drift: duplicated tests, random selectors, weak fixtures, fixed waits]
-  B -->|With harness| D[Governed output: specs, fixtures, page objects, assertions, tags, evidence]
-  D --> E[Reviewable automation]
-  D --> F[CI-compatible commands]
-  D --> G[Reusable local context]
-  D --> H[Lower duplicate and brittle-test risk]
-```
-
-The goal is not just faster test creation. The goal is consistent, reviewable,
-and maintainable Playwright automation across a team.
-
-## Prompt Mode Router
-
-![Prompt mode router](docs/blog/assets/prompt-mode-router.png)
-
-Every prompt starts with the same decision:
-
-```mermaid
-flowchart TD
-  A[Prompt: create tests for manager role flow] --> B{MCP available and allowed?}
-  B -->|Yes| C[Use official Playwright planner/generator/healer agents]
-  B -->|No| D[Use CLI evidence path]
-  D --> E[Check or update capture workflows]
-  E --> F[Run playwright-cli captures]
-  C --> G[Apply harness standards]
-  F --> G
-  G --> H[Create or heal tests]
-  H --> I[Verify with npx playwright test]
-```
-
-So MCP-enabled projects use official Playwright Agents for richer exploration,
-while MCP-blocked projects use capture workflows and CLI evidence. Both paths
-still follow the same team framework rules.
-
-## Two Operating Modes
-
-| Mode 1: MCP + Official Playwright Agents | Mode 2: No MCP + CLI Evidence |
-| --- | --- |
-| Use official Playwright planner, generator, and healer agents when teams have MCP access. The harness still controls standards and review gates. | Use Copilot or a coding agent with `playwright-cli` captures and `npx playwright test` evidence when MCP is blocked. |
-| <img src="docs/blog/assets/mode-1-mcp-agents.png" alt="Mode 1 MCP architecture" width="100%"> | <img src="docs/blog/assets/mode-2-cli-evidence.png" alt="Mode 2 CLI evidence architecture" width="100%"> |
-
-## Core Architecture
-
-```mermaid
-flowchart TB
-  subgraph AgentInputs[Agent Inputs]
-    P[Prompt]
-    R[AGENTS.md]
-    C[.github/copilot-instructions.md]
-    Y[contexts/*.yml]
-    Cap[contexts/captures/*.yml]
-  end
-
-  subgraph Planning[Planning And Intelligence]
-    S[specs/*.md]
-    SG[source graph]
-    TG[test graph]
-    CG[coverage graph]
-    DG[duplicate rules]
-  end
-
-  subgraph Framework[Playwright Framework Layers]
-    F[fixtures/*.ts]
-    PO[pages/*.ts]
-    A[assertions/*.ts]
-    D[data/*.ts]
-    T[tests/*.spec.ts]
-  end
-
-  subgraph Verification[Evidence Loop]
-    CLI[playwright-cli snapshots]
-    PW[npx playwright test]
-    Art[traces, screenshots, videos, reports]
-    Review[review gates]
-  end
-
-  P --> R --> Y
-  C --> Y
-  Y --> S
-  Cap --> S
-  Y --> SG --> CG
-  T --> TG --> CG
-  TG --> DG
-  S --> F
-  S --> PO
-  S --> A
-  F --> T
-  PO --> T
-  A --> T
-  D --> T
-  CLI --> Cap
-  T --> PW --> Art --> Review
-  CG --> Review
-  DG --> Review
-```
-
-## Source-Aware Graph Intelligence
-
-```mermaid
-flowchart LR
-  A[Application source or manifest] --> B[graph:source]
-  C[Existing specs/tests/pages/assertions] --> D[graph:tests]
-  E[Curated captures] --> D
-  B --> F[graph:coverage]
-  D --> F
-  D --> G[graph:duplicates]
-  F --> H[graphs/index.html]
-  G --> H
-  H --> I[Possible tests]
-  H --> J[Coverage gaps]
-  H --> K[Duplicate candidates]
-  H --> L[Interactive visual map]
-```
-
-![Interactive architecture and coverage graph](docs/blog/assets/architecture-coverage-graph.png)
-
-The generated `graphs/index.html` report is tabbed so users can inspect one
-view at a time: Overview Map, Route Coverage, Gaps & Duplicates, Candidate
-Tests, and Graph Inputs. The tabs can also be opened directly with hashes such
-as `graphs/index.html#coverage` or `graphs/index.html#candidates`.
-
-## Source Manifest Sync
-
-The graph layer is intentionally generic. It consumes a source manifest with
-routes, roles, actions, fields, states, auth context, and test IDs. The harness
-does not require every application to look like the sample CRM app.
-
-This repo includes two adapter paths:
-
-```text
-scripts/source-adapters/generic-source.mjs
-scripts/source-adapters/sample-crm.mjs
-```
-
-The generic scanner creates a first-pass manifest by scanning common React,
-Next, Angular, Vue, plain HTML, Spring Boot, and .NET source patterns. It looks
-for routes, route files, controller mappings, links, labels, buttons, test IDs,
-forms, visible states, and role/guard hints.
-
-The recommended day-to-day model is:
-
-```text
-generic scanner creates baseline manifest
--> agent reviews source, tests, captures, and graph gaps
--> agent enriches missing auth, roles, states, and workflow intent
--> capture workflow becomes curated reusable page context
--> Playwright tests verify behavior
-```
-
-Start here when a consuming team has source access:
+The skills keep instructions short and hand repeatable work to deterministic tools:
 
 ```bash
-npm run source:manifest -- --root=path/to/app --output=source-manifest.json --url=http://localhost:3000 --name=my-app
+# Would these tests catch this defect? Runs on a disposable copy, never the original.
+npm run mutate -- --project examples/crm-scale --file app/api.mjs \
+  --find "  const total = round2(raw);" --replace "  const total = Math.floor(raw);" --grep "quote totals"
+# → baselines green twice, faulted runs fail twice: VERDICT killed, original project unchanged: yes
+
+# Where is each criterion tested, and which role rules are never checked?
+npm run coverage:matrix -- --project examples/crm-scale \
+  --criteria examples/crm-scale/requirements/acceptance-criteria.json --flagged
 ```
 
-Real teams can then enrich the manifest, or generate it from their own route
-config, design system metadata, feature flags, or test data model.
-
-Useful commands:
-
-```bash
-npm run source:manifest
-npm run source:manifest:check
-npm run source:manifest:crm
-npm run source:manifest:crm:check
-```
-
-In this repository, `npm run source:manifest` uses the common scanner file:
-
-```text
-scripts/source-adapters/generic-source.mjs
-```
-
-The optional sample CRM demo uses the richer CRM adapter through
-`npm run source:manifest:crm`.
-
-Customization options:
-
-| Option | Use |
-| --- | --- |
-| `SOURCE_MANIFEST=path/to/source-manifest.json` | Choose the manifest consumed by graph and capture scripts |
-| `SOURCE_MANIFEST_ADAPTER=generic-source` | Explicitly use the common scanner adapter |
-| `SOURCE_MANIFEST_ADAPTER=path/to/adapter.mjs` | Use a custom precision adapter that exports `buildManifest()` |
-| `SOURCE_MANIFEST_COMMAND="npm run app:manifest"` | Optional advanced path when a team already owns a manifest generator |
-| `SOURCE_MANIFEST_SYNC=0` | Disable automatic manifest sync |
-
-The test, graph, and capture workflow scripts refresh the manifest first for
-the sample app. In a real project, point the sync command at the application’s
-source root so source changes are reflected before graph review and test
-execution. Use the generic scanner as the baseline, and use app-specific
-generation only when teams need exact auth, role, feature flag, or dynamic-state
-semantics.
-
-The scanner reduces the blank-page problem for new teams. It should not replace
-agent review or team-owned business knowledge.
-
-Before/after graph-loop evidence for the manager role flow:
-
-| Before Manager Flow | After Manager Flow |
-| --- | --- |
-| ![Before graph metrics](docs/evidence/manager-flow-graph-loop/assets/before-graph-metrics.png) | ![After graph metrics](docs/evidence/manager-flow-graph-loop/assets/after-graph-metrics.png) |
-
-Evidence pack:
-[`docs/evidence/manager-flow-graph-loop/README.md`](docs/evidence/manager-flow-graph-loop/README.md)
-
-The image above is an example snapshot. The actual graph data is regenerated
-from the current source manifest, tests, page objects, assertions, tags, and
-captures every time the graph command runs.
-
-| Signal | Meaning |
-| --- | --- |
-| Source routes | Computed from the app source or source manifest |
-| Covered routes | Computed from existing Playwright specs and tests |
-| Candidate tests | Computed from routes, roles, actions, states, and validations |
-| Coverage gaps | Computed from source candidates minus existing coverage |
-| Duplicate/overlap risks | Computed from flow intent, role, route, action, assertion, and tags |
-| Visual graph nodes | Computed from source, tests, captures, gaps, and duplicates |
-| Visual graph edges | Computed from relationships between those nodes |
-
-Generate the report:
-
-```bash
-npm run graph:view
-```
-
-Open:
-
-```text
-graphs/index.html
-```
-
-## Capture Workflow
-
-![Capture workflow lifecycle](docs/blog/assets/capture-recipe-lifecycle.png)
-
-This is the practical day-to-day loop for role-based prompts.
-
-```mermaid
-flowchart TD
-  A[User asks for manager role flows] --> B[Agent reads source or manifest]
-  B --> C[Agent identifies allowed and denied routes]
-  C --> D[Generate or update capture workflow]
-  D --> E[Run playwright-cli workflow]
-  E --> F[Curated YAML snapshots and screenshots]
-  F --> G[Create or heal tests from framework layers]
-  G --> H[Run npx playwright test]
-
-  I[Day 1] --> J[Capture once and create tests]
-  K[Day 2] --> L[Run tests without recapture]
-  M[Later] --> N[Refresh only affected captures]
-```
-
-The user does not need to memorize every low-level `playwright-cli` command.
-For the sample CRM manager role, the agent or user can run the workflow
-commands. Internally, these workflows are stored as YAML recipes in
-`contexts/capture-recipes.yml`:
-
-```bash
-npm run capture:recipes:generate
-npm run capture:recipe -- --list
-npm run capture:crm:manager -- --dry-run
-npm run capture:crm:manager
-```
-
-Then generate or heal tests from the captured page context and verify with:
-
-```bash
-APP_BASE_URL=http://127.0.0.1:4173 npm run sample:crm:test
-```
-
-## Framework Layers
-
-```mermaid
-flowchart LR
-  Spec[specs: human flow plan] --> Test[tests: executable flow]
-  Fixture[fixtures: setup and injection] --> Test
-  Page[pages: locators and actions] --> Test
-  Assert[assertions: web-first checks] --> Test
-  Data[data: builders and reusable values] --> Test
-  Test --> Evidence[Playwright evidence]
-```
-
-| Folder | Purpose |
-| --- | --- |
-| `specs/` | Human-readable flow plans |
-| `tests/` | Executable Playwright specs |
-| `fixtures/` | Typed fixtures, auth, browser context, page instantiation |
-| `pages/` | Page objects, stable locators, user actions |
-| `assertions/` | Reusable web-first expectations |
-| `data/` | Test data builders |
-| `contexts/` | Agent rules, command maps, graph rules, capture catalog |
-| `scripts/` | Source/test/coverage/duplicate graph generation |
-| `examples/sample-crm-app/` | Optional demo app only |
-
-## Sample CRM Demo App
-
-The CRM app is included only to demonstrate how source-aware graph intelligence
-works. Teams can replace it with their own application source or manifest.
-
-![Sample CRM dashboard](docs/blog/assets/sample-crm-dashboard.png)
-
-![Sample CRM leads page](docs/blog/assets/sample-crm-leads.png)
-
-Demo routes:
-
-```mermaid
-flowchart TD
-  Login[/login/] --> Dashboard[/crm/dashboard/]
-  Dashboard --> Leads[/crm/leads/]
-  Dashboard --> Accounts[/crm/accounts/]
-  Dashboard --> Opportunities[/crm/opportunities/]
-  Dashboard --> Reports[/crm/reports/]
-  Dashboard --> Admin[/crm/admin/users/]
-
-  AdminRole[admin] --> Dashboard
-  ManagerRole[manager] --> Accounts
-  ManagerRole --> Opportunities
-  ManagerRole --> Reports
-  SalesRole[sales] --> Leads
-  SalesRole --> Opportunities
-  ViewerRole[viewer] --> Accounts
-```
-
-## How Teams Use It
-
-```mermaid
-sequenceDiagram
-  participant Human
-  participant Copilot as Copilot/Agent
-  participant Harness
-  participant PWCLI as playwright-cli
-  participant PW as npx playwright test
-  participant Graph as Graph Report
-
-  Human->>Copilot: Create a smoke flow from this prompt
-  Copilot->>Harness: Read AGENTS.md and contexts/*.yml
-  Copilot->>PWCLI: Capture page snapshots when needed
-  PWCLI-->>Harness: contexts/captures/*.yml
-  Copilot->>Harness: Create/update spec, page object, assertion, test
-  Copilot->>PW: Run focused verification
-  PW-->>Copilot: CLI output and artifacts
-  Copilot->>Graph: Check coverage and duplicate risks
-  Copilot-->>Human: Changed files, commands, evidence, skipped gates
-```
-
-## Quick Start
-
-```bash
-npm install
-npm run typecheck
-npm test
-```
-
-Optional global page-capture CLI:
-
-```bash
-npm install -g @playwright/cli@latest
-playwright-cli --help
-```
-
-Run the sample CRM app:
-
-```bash
-npm run sample:crm
-```
-
-Run the CRM sample tests:
-
-```bash
-APP_BASE_URL=http://127.0.0.1:4173 npm run sample:crm:test
-```
-
-Generate the graph view:
-
-```bash
-npm run graph:view
-```
-
-Serve the graph view:
-
-```bash
-npm run graph:serve
-```
-
-## Command Map
-
-| Command | Use |
-| --- | --- |
-| `npm test` | Full Playwright harness gate |
-| `npm run test:smoke` | Smoke-tagged tests |
-| `npm run typecheck` | TypeScript validation |
-| `npm run source:manifest -- --root=path/to/app --output=source-manifest.json` | Create a first-pass manifest with the common scanner |
-| `npm run source:manifest:check -- --root=path/to/app --output=source-manifest.json` | Fail if the scanner manifest is stale |
-| `npm run source:manifest:crm` | Regenerate the richer sample CRM manifest |
-| `npm run sample:crm` | Start optional CRM demo app |
-| `APP_BASE_URL=http://127.0.0.1:4173 npm run sample:crm:test` | Run CRM sample tests |
-| `npm run capture:recipes:generate` | Refresh the source manifest, then generate capture workflows |
-| `npm run capture:recipe -- --list` | List available capture workflows |
-| `npm run capture:crm:manager -- --dry-run` | Preview manager role captures |
-| `npm run capture:crm:manager` | Capture manager allowed and denied page states |
-| `npm run graph:view` | Generate source/test/coverage/duplicate graph report |
-| `npm run graph:serve` | Serve interactive graph locally |
-
-## Agent Rules At A Glance
-
-```mermaid
-flowchart TD
-  A[Read context first] --> B[Check existing coverage]
-  B --> C[Use captures or collect CLI evidence]
-  C --> D[Make smallest framework-aligned change]
-  D --> E[Run focused Playwright command]
-  E --> F{Passed?}
-  F -->|Yes| G[Report files, commands, evidence]
-  F -->|No| H[Inspect trace/report/output]
-  H --> D
-```
-
-Core rules:
-
-- MCP is optional, not required.
-- Use accessible locators first, then stable test IDs.
-- Keep actions in page objects and expectations in assertion helpers.
-- Use fixtures for shared setup and page instantiation.
-- Avoid fixed waits.
-- Verify with Playwright CLI/test-runner evidence.
-- Check graph coverage and duplicate risks before adding broad tests.
-
-## Longer Explanations
-
-- Overview deck: [`Agentic-Playwright-Harness-Copilot-CLI.pptx`](Agentic-Playwright-Harness-Copilot-CLI.pptx)
-- Agent instructions: [`AGENTS.md`](AGENTS.md)
-- Copilot instructions: [`.github/copilot-instructions.md`](.github/copilot-instructions.md)
-
-## Optional Jev credentials
-
-Store your Vercel AI Gateway key as `AI_GATEWAY_API_KEY` in `.env.local` in this
-project. The local file is ignored by Git; `.env.example` contains only a blank
-placeholder. Keep the key in the Node.js process, outside browser code.
-
-The planned TypeScript integration uses `experimental_evaluate` from the `ai`
-package with model `typesafe-ai/jev`. Vercel AI SDK reads `AI_GATEWAY_API_KEY`
-from the Node.js environment and routes this model through AI Gateway.
-Its question types are `boolean`, `choice`, and `score`; `boolean` corresponds
-to the yes/no probability called `noul` in the native TypeSafe API.
-
-Load `.env.local` into the Node.js process before calling `evaluate`; this
-credential setup does not install the SDK or automatically load the file into
-existing Playwright commands. Reuse your existing Gateway key; creating another
-key through the Vercel CLI is unnecessary if you already have one.
-
-See [Vercel's AI SDK integration](https://vercel.com/docs/ai-gateway/sdks-and-apis/ai-sdk)
-and [current Jev pricing](https://vercel.com/ai-gateway/models/jev).
-
-## References
-
-- [Playwright Test Agents](https://playwright.dev/docs/test-agents)
-- [Playwright MCP](https://playwright.dev/docs/getting-started-mcp)
-- [Playwright Agent CLI](https://playwright.dev/docs/getting-started-cli)
-- [Playwright authentication](https://playwright.dev/docs/auth)
-- [Playwright fixtures](https://playwright.dev/docs/test-fixtures)
-- [Playwright annotations and tags](https://playwright.dev/docs/test-annotations)
-- [Playwright CLI](https://playwright.dev/docs/test-cli)
-
-## Controlled benchmark instrumentation
-
-See [benchmark protocol and validation](benchmarks/README.md) for reproducible synthetic tasks, measured evidence, missing metrics and claim limitations.
+![npm run mutate: hash, copy, baselines, fault, faulted runs, verdict](docs/diagrams/mutate-flow.svg)
+
+![coverage:matrix flags a role rule checked for only two of five roles](docs/diagrams/coverage-matrix-example.svg)
+
+Attach the index to a work item (`npm run portal -- attach … --kind coverage --file
+matrix.json`, from `--json --out matrix.json`) and `npm run report` shows it in a
+**Coverage index** tab: flagged role rules as a role-by-role grid, and every
+criterion with its candidate tests. [Report viewer](docs/portal.md).
+
+`mutate` answers one question with two healthy baselines and two faulted runs
+(killed, survived, inconclusive or invalid). `coverage:matrix` is an index of
+candidate tests with their roles and denial checks; it points, and the assertions
+decide. `npm run tools:test` covers both.
+
+- [Quality module](quality/README.md): intake, claim checks, behavioral mutation runner and report viewer.
+- [Mutation workflow](quality/docs/behavioral-mutations.md): trusted local JS/TS targets, selected faults and configured probes; not universal application support.
+- [Optional integrations](.agents/skills/playwright-agent/references/integrations.md): claim checks and the mutation runner's CLI/MCP tools.
+- [Evaluation reports](docs/evaluation-reports.md): inspectable rule/expected/observed scorecards for proving the workflow on your own tasks.
+- [Synthetic demo](examples/validation-demo/README.md): mutation verification on the bundled sample CRM, separate from daily authoring.
+
+The source ZIP includes the skills and public synthetic CRM-DEMO-001 documents,
+and excludes private tasks, credentials, dependencies and generated local reports.

@@ -92,6 +92,21 @@ test('saved host-agent findings remain proposals and become stale after native d
  const changed=await (await a.request('/api/tasks/LOGIN-123')).json();assert.equal(changed.run.analysis.stale,true);assert.equal(changed.run.accepted,false);
 });
 
+test('authoring findings without intake are read-only task evidence without invented acceptance state',async t=>{
+ const a=await app(t),file=path.join(a.root,'findings.md');
+ await writeFile(file,'# Authoring findings\n\nUpdated a locator. No assessment or mutation requested.');
+ await recordAgentAnalysis({repo:a.repo,taskId:'EDIT-1',file});
+ const before=await snapshot(a.repo),response=await a.request('/api/tasks/EDIT-1');
+ assert.equal(response.status,200);
+ const detail=await response.json();
+ assert.equal(detail.run,null);assert.deepEqual(detail.runs,[]);
+ assert.equal(detail.analysis.binding,'task');assert.match(detail.analysis.text,/No assessment or mutation/);
+ const list=await (await a.request('/api/tasks')).json();
+ assert.equal(list.tasks[0].status,'Findings recorded');assert.equal(list.tasks[0].criteria,0);
+ assert.equal((await a.request('/api/tasks/EDIT-1',{method:'POST',body:'{}'})).status,405);
+ assert.deepEqual(await snapshot(a.repo),before);
+});
+
 test('native intake and explicitly reviewed criteria are displayed with unchanged source downloads',async t=>{
  const a=await app(t),{run,created,detail}=await create(a);
  const reviewed=await saveIntakeDraft({run,draft:detail.run.draft});
@@ -143,6 +158,7 @@ test('report-only tasks and unavailable intake metadata retain honest distinct s
  const {run}=await create(a,'BROKEN-INTAKE');await writeFile(path.join(run,'intake.json'),'{invalid saved JSON');
  const tasks=await (await a.request('/api/tasks')).json();
  assert.equal(tasks.tasks.find((entry:{id:string})=>entry.id==='REPORT-ONLY').status,'Reports only');
+ assert.ok(tasks.tasks.find((entry:{id:string})=>entry.id==='REPORT-ONLY').updatedAt,'report import time counts as task activity');
  assert.equal(tasks.tasks.find((entry:{id:string})=>entry.id==='BROKEN-INTAKE').status,'Evidence unavailable');
  const broken=await a.request('/api/tasks/BROKEN-INTAKE');assert.equal(broken.status,400);assert.match((await broken.json()).error,/Invalid saved JSON/);
 });

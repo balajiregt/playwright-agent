@@ -42,3 +42,14 @@ test('analysis CLI records caller-relative findings for the exact existing intak
  const recorded=JSON.parse(await readFile(path.join(prepared.run,'agent-analysis.json'),'utf8'));
  assert.match(recorded.text,/Runtime not run/);
 });
+
+test('analysis CLI saves a simple authoring report without a run or document intake',async t=>{
+ const root=await mkdtemp(path.join(os.tmpdir(),'viewer simple CLI-')),repo=path.join(root,'project');
+ t.after(()=>rm(root,{recursive:true,force:true}));await mkdir(repo);
+ await writeFile(path.join(root,'findings.md'),'# Authoring\n\nUpdated assertion; no formal assessment or mutation requested.');
+ const {stdout}=await run(['analysis','--repo','project','--task','EDIT-1','--file','findings.md'],root);
+ const result=JSON.parse(stdout);assert.equal(result.scope,'task');assert.equal(result.executed,false);
+ const recorded=JSON.parse(await readFile(result.file,'utf8'));
+ assert.equal(recorded.kind,'agent-task-analysis');assert.equal(recorded.intakeHash,undefined);
+ await assert.rejects(readFile(path.join(repo,'artifacts/agent-tasks/EDIT-1/intake/intake.json')),{code:'ENOENT'});
+});

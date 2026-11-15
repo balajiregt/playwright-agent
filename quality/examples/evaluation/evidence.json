@@ -1,0 +1,23 @@
+{
+  "fictional": true,
+  "assessment": {
+    "label": "partial"
+  },
+  "matrix": {
+    "linked": 3
+  },
+  "authoring": {
+    "focusedSuite": "passed",
+    "oldAssertionsPreserved": true
+  },
+  "mutation": {
+    "baselines": 2,
+    "activated": true,
+    "restored": true
+  },
+  "routing": {
+    "selected": [
+      "playwright-test-authoring"
+    ]
+  }
+}

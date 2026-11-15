@@ -13,7 +13,7 @@ import {saveMutationReport} from './report.js';
 
 export interface Execution {status:string;errors:number;tests:{id:string;title:string;file:string;line:number;project:string;expectedStatus:string;results:{status:string;retry:number;durationMs:number;assertionFailure:boolean;errors:string[]}[]}[];wallMs:number}
 export interface FaultResult {id:string;requirementId:string;status:'killed'|'survived'|'not_activated'|'invalid_mutation'|'inconclusive'|'not_run';reason?:string;baselineProbe?:string;mutantProbe?:string;probeScreenshots?:{baseline?:string;mutant?:string};attempts:Execution[];killingTests:string[]}
-export interface Campaign {version:1;kind:'playwright-behavioral-mutations';runId:string;createdAt:string;contextHash:string;repositoryHash?:string;planHash?:string;scopeHash?:string;plan:MutationPlan;baseline:Execution[];restored:Execution|null;faults:FaultResult[];originalUnchanged:boolean;assessments?:unknown;wallMs:number}
+export interface Campaign {version:1;kind:'playwright-behavioral-mutations';runId:string;createdAt:string;contextHash:string;repositoryHash?:string;planHash?:string;scopeHash?:string;plan:MutationPlan;baseline:Execution[];restored:Execution|null;faults:FaultResult[];originalUnchanged:boolean;/** Legacy campaigns may carry retired model predictions; never written now. */assessments?:unknown;wallMs:number}
 const excluded=new Set(['node_modules','artifacts','test-results','playwright-report','output','dist','build','coverage','__pycache__']);
 export async function isolatedCopy(repo:string,destination:string){
  let bytes=0,files=0;
@@ -58,11 +58,11 @@ export function classify(attempts:Execution[],baseline:Execution):Pick<FaultResu
 async function writeHarness(copy:string,c:MutationConfig){
  const dir=path.join(copy,'.decision-mutation');await mkdir(dir);
  const importConfig='../'+c.playwrightConfig.replace(/\\/g,'/');
- const common=`import original from ${JSON.stringify(importConfig)};\nconst servers=original.webServer?(Array.isArray(original.webServer)?original.webServer:[original.webServer]).map(s=>({...s,reuseExistingServer:false})):undefined;\n`;
- const settings=`webServer:servers,retries:0,workers:2,timeout:${c.testTimeoutMs},expect:{...original.expect,timeout:Math.min(original.expect?.timeout??3000,${c.testTimeoutMs}-500)},use:{...original.use,trace:'off',screenshot:'off',video:'off'},reporter:${JSON.stringify(path.join(ROOT,'scripts/mutation-reporter.cjs'))}`;
+ const common=`import original from ${JSON.stringify(importConfig)};import path from 'node:path';\nconst configDir=${JSON.stringify(path.dirname(path.join(copy,c.playwrightConfig)))};\nconst servers=original.webServer?(Array.isArray(original.webServer)?original.webServer:[original.webServer]).map(s=>({...s,cwd:path.resolve(configDir,s.cwd??'.'),reuseExistingServer:false})):undefined;\nconst projects=original.projects?.map(p=>({...p,...(p.testDir?{testDir:path.resolve(configDir,p.testDir)}:{})}));\n`;
+ const settings=`webServer:servers,projects,retries:0,workers:2,timeout:${c.testTimeoutMs},expect:{...original.expect,timeout:Math.min(original.expect?.timeout??3000,${c.testTimeoutMs}-500)},use:{...original.use,trace:'off',screenshot:'off',video:'off'},reporter:${JSON.stringify(path.join(ROOT,'scripts/mutation-reporter.cjs'))}`;
  // Resolve original testDir at runtime; no assumed test folder in external repositories.
- await writeFile(path.join(dir,'suite.config.ts'),common+`import path from 'node:path';\nexport default {...original,testDir:path.resolve(${JSON.stringify(path.dirname(path.join(copy,c.playwrightConfig)))},original.testDir??'.'),${settings}};`);
- await writeFile(path.join(dir,'probe.config.ts'),common+`export default {...original,testDir:${JSON.stringify(dir)},testMatch:'probe.spec.ts',${settings}};`);
+ await writeFile(path.join(dir,'suite.config.ts'),common+`export default {...original,testDir:path.resolve(configDir,original.testDir??'.'),${settings}};`);
+ await writeFile(path.join(dir,'probe.config.ts'),common+`export default {...original,${settings},testDir:${JSON.stringify(dir)},testMatch:'probe.spec.ts',testIgnore:[],grep:undefined,grepInvert:undefined,projects:projects?.map(p=>({...p,testDir:${JSON.stringify(dir)},testMatch:'probe.spec.ts',testIgnore:[],grep:undefined,grepInvert:undefined,dependencies:[],teardown:undefined}))};`);
 }
 async function execute(copy:string,c:MutationConfig,file:string,out:string,project?:string):Promise<Execution>{
  const cli=createRequire(path.join(copy,'package.json')).resolve('@playwright/test/cli');
@@ -72,14 +72,20 @@ async function execute(copy:string,c:MutationConfig,file:string,out:string,proje
  catch{return {status:result.timedOut?'timedout':'runner_error',errors:1,tests:[],wallMs:result.wallMs};}
 }
 async function probe(copy:string,c:MutationConfig,m:Mutant,out:string):Promise<{execution:Execution;actual?:string}>{
- const setup=c.probeSetup?`import {${c.probeSetup.export} as setup} from ${JSON.stringify('../'+c.probeSetup.module.replace(/\\/g,'/'))};`:'';
- const code=`import {test,expect} from '@playwright/test';import {writeFileSync} from 'node:fs';${setup}
-test('independent requirement observation',async({page})=>{
+ const adapter=m.probe.kind==='adapter'?c.probeAdapter:undefined;
+ if(adapter)await insideRepo(copy,adapter.module);
+ const setup=adapter?`import {${adapter.export} as observe} from ${JSON.stringify('../'+adapter.module.replace(/\\/g,'/'))};`:c.probeSetup?`import {${c.probeSetup.export} as setup} from ${JSON.stringify('../'+c.probeSetup.module.replace(/\\/g,'/'))};`:'';
+ const observation=m.probe.kind==='adapter'?`
+ const actual=await observe({page,input:${JSON.stringify(m.probe.input)}});
+ if(typeof actual!=='string'||actual.length>1000)throw Error('Probe adapter must return a string of at most 1,000 characters');`:`
  ${c.probeSetup?`await setup(page,${JSON.stringify(m.probe.roles)});`:''}
  await page.goto(${JSON.stringify(m.probe.path)});
  ${c.readiness?`await expect(page.getByTestId(${JSON.stringify(c.readiness.testId)})).toHaveText(${JSON.stringify(c.readiness.text)});`:''}
  const locator=page.getByTestId(${JSON.stringify(m.probe.testId)});
- const actual=${m.probe.kind==='count'?"String(await locator.count())":"await locator.textContent()"};
+ const actual=${m.probe.kind==='count'?"String(await locator.count())":"await locator.textContent()"};`;
+ const code=`import {test,expect} from '@playwright/test';import {writeFileSync} from 'node:fs';${setup}
+test('independent requirement observation',async({page})=>{
+ ${observation}
  writeFileSync(${JSON.stringify(out+'.observation')},JSON.stringify({actual}));
  ${c.captureEvidence?`await page.screenshot({path:${JSON.stringify(out+'.png')},fullPage:true});`:''}});`;
  await writeFile(path.join(copy,'.decision-mutation','probe.spec.ts'),code);
@@ -87,10 +93,11 @@ test('independent requirement observation',async({page})=>{
  let actual;try{actual=JSON.parse(await readFile(out+'.observation','utf8')).actual;}catch{}
  return {execution,actual:typeof actual==='string'?actual:undefined};
 }
-export async function runCampaign(c:MutationConfig,input:unknown,assessments?:unknown){
+/** Identity of the execution settings a campaign ran under (config, projects, env, timeouts, probes). */
+export const executionScopeHash=(c:MutationConfig)=>digest(JSON.stringify({playwrightConfig:c.playwrightConfig,projects:c.projects,env:c.env,baselineRuns:c.baselineRuns,testTimeoutMs:c.testTimeoutMs,suiteTimeoutMs:c.suiteTimeoutMs,probeSetup:c.probeSetup,readiness:c.readiness,...(c.probeAdapter?{probeAdapter:c.probeAdapter}:{})}));
+export async function runCampaign(c:MutationConfig,input:unknown){
  const start=performance.now(),context=await loadContext(c),plan=validatePlan(input,context,c),before=await treeHash(c.repo);
- const {executionScopeHash}=await import('./workload.js');
- const report:Campaign={version:1,kind:'playwright-behavioral-mutations',runId:randomUUID(),createdAt:new Date().toISOString(),contextHash:context.hash,repositoryHash:before,planHash:digest(JSON.stringify(plan)),scopeHash:executionScopeHash(c),plan,baseline:[],restored:null,faults:plan.mutations.map(m=>({id:m.id,requirementId:m.requirementId,status:'not_run',attempts:[],killingTests:[]})),originalUnchanged:false,assessments,wallMs:0};
+ const report:Campaign={version:1,kind:'playwright-behavioral-mutations',runId:randomUUID(),createdAt:new Date().toISOString(),contextHash:context.hash,repositoryHash:before,planHash:digest(JSON.stringify(plan)),scopeHash:executionScopeHash(c),plan,baseline:[],restored:null,faults:plan.mutations.map(m=>({id:m.id,requirementId:m.requirementId,status:'not_run',attempts:[],killingTests:[]})),originalUnchanged:false,wallMs:0};
  const dir=path.join(c.output,report.runId);await mkdir(dir,{recursive:true});
  const temp=await mkdtemp(path.join(os.tmpdir(),'playwright-mutations-')),copy=path.join(temp,'repo');
  try{

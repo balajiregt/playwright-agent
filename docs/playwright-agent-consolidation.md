@@ -69,8 +69,7 @@ The original working README is retained as `quality/docs/legacy-decision-bench-r
   The platform groups the legacy decision-bench identity under Playwright Agent.
 - New standard exports use project ID `agentic-playwright` and the parent
   repository's platform-results branch. Preparing an export does not publish it.
-- Node 22 is required for the installed native Code Mode build. Python document
-  import and local inference remain separately configured optional runtimes.
+- Python document parsers remain a separately configured optional runtime.
 - No benchmark campaign, hosted inference, global MCP connection, hook
   installation or result publication is part of this migration.
 
@@ -86,10 +85,8 @@ the private delivery report under the workspace migration artifact directory.
 The product repository is `balajiregt/playwright-agent`, renamed from
 `balajiregt/playwright-harness-framework`. The workspace folder stays at
 `qa-projects/Playwright Agentic Framework`; registry IDs and historical result
-identities remain stable. Benchmark publication is manual-only; publishing this
-source migration does not start a benchmark campaign. The root Node version
-retains the upstream security baseline. Use Node 22 for the optional Code Mode
-native integration, rebuilding it explicitly for the selected Node runtime.
+identities remain stable. The root Node version retains the upstream security
+baseline.
 
 ## Retired product surfaces
 
@@ -99,3 +96,17 @@ Analyses section. The standalone `projects/qa-dashboard-viewer` was moved to
 ignored recovery artifacts and removed from active registration and launchers.
 Detailed quality reports belong to this product; reviewed public results belong
 to its Build with Balaji project page. No metrics were rerun or republished.
+
+## Core focus cleanup (10 November 2026)
+
+The product was narrowed to its three questions: acceptance-criteria coverage,
+traceability completeness and assertion sensitivity through behavioral mutation.
+Removed: local/hosted model comparisons (Laya, Qwen, OpenAI, Jev/TypeSafe), the
+`qa` team CLI and its metrics publishing, Code Mode, independent mutation
+analysis, rubric/benchmark previews, the root `benchmarks/` dashboard and
+publication workflow, demo packaging and platform-publish exports. Judgments now
+come only from the host coding agent. Intake, claim checks, the mutation runner
+(plus `mutation bind` for reviewed catalogues), evaluation scorecards, the
+reporter and the report viewer remain. A full pre-cleanup snapshot is kept in
+the ignored `artifacts/recovery/pre-core-cleanup-20261110.tar.gz`.
+

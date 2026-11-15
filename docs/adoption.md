@@ -1,101 +1,103 @@
 # Use Playwright Agent in an existing project
 
-Playwright Agent is a reusable workflow for your coding agent. Keep one toolkit
-checkout or extracted source ZIP and connect your existing Playwright project.
-Your application tests, fixtures, page objects and configuration stay in their
-current repository. The bundled CRM and its evidence demo are supporting proof;
-they are not the application you must adopt or a framework to copy.
+For a step-by-step walkthrough, start with [getting started](getting-started.md).
 
-## Configure the selected repository
+Keep one toolkit checkout or extracted source ZIP. The adopting project's own
+instructions, application, tests, helpers and configuration remain authoritative.
 
-Your target must already contain `package.json` declaring `@playwright/test`
-and an existing Playwright configuration. From the toolkit root, run:
+## Configure once
 
-```sh
-npm run agent:configure -- --repo "../my-existing-project"
-```
+From the toolkit root:
 
-The default config is `playwright.config.ts`. Select another existing file or
-just one client explicitly:
+~~~sh
+npm ci
+npm ci --prefix quality
+npm run agent:configure -- --repo "../my-existing-project" --client both
+~~~
 
-```sh
-npm run agent:configure -- --repo "../my-existing-project" --playwright-config config/ui.config.ts --client codex
-npm run agent:configure -- --repo "../my-existing-project" --client copilot
-```
+The target must already declare @playwright/test and have an existing config.
+Select another existing file with --playwright-config config/ui.config.ts.
+Clients are codex, copilot or both.
 
-Use the same `--playwright-config` value on repeat runs. The default client is
-`both`. The command resolves the selected folder, checks its package/config and
-preflights every destination before writing. It creates only:
+Codex onboarding adds a router shim and three capability shims:
+playwright-test-authoring, playwright-assessment and playwright-mutation.
+The latter two have explicit-only discovery policies. The router can load them
+when the user clearly requests that work in natural language.
+Copilot onboarding adds one custom-agent entrypoint linking to the same router.
+Each shim explicitly targets the adopter repository, not the toolkit or CRM.
 
-- `.playwright-agent.local.json`, containing a relative toolkit path and the
-  selected existing configuration; that filename is appended to `.gitignore`.
-- A local Codex skill shim at `.agents/skills/playwright-agent/SKILL.md` when
-  Codex is selected.
-- A local Copilot agent shim at `.github/agents/playwright.agent.md` when
-  Copilot is selected.
+The ignored .playwright-agent.local.json stores a relative toolkit location and
+the selected config. Judgments come from the host coding agent; no model provider
+is configured. Older configs with a retired decisionProvider key stay valid and
+are left unchanged.
 
-The shims point through relative links to the one canonical toolkit workflow,
-while explicitly selecting **your adopter repository** and its own instructions.
-Existing `AGENTS.md`, source, tests and package manifests are preserved. Identical
-onboarding is idempotent; a different existing local config or selected agent file
-causes refusal without conflict-related partial writes. Review and migrate such
-files explicitly rather than expecting the command to overwrite them.
+Keep that relative layout valid. Onboarding preserves AGENTS.md,
+source, tests and package manifests; identical configuration is idempotent.
+All selected destinations are checked before writes. Different existing shims
+are refused: review and replace only the generated files deliberately, then
+reconfigure. Do not delete project instructions to upgrade.
 
-Keep the toolkit available at the configured relative location. Moving either
-repository requires reviewing its local mapping and shim links. The tool does
-not install dependencies, launch browsers or models, configure global skills,
-MCP servers or hooks, select requirements, or execute any tests.
+Setup does not install dependencies into the target, choose requirements,
+launch browsers/models, connect MCP servers, enable hooks or run tests.
+Reload the client session to refresh discovery. Directly reading the canonical
+skill remains a fallback; a file check does not prove a live client's picker.
 
-## Work in your project
+## Get an evidence report from every run
 
-Open the adopter repository in your coding tool. Select its Playwright Agent
-skill/agent, read local instructions, and identify the actual ticket, acceptance
-criteria or task folder. Existing project context conventions remain valid;
-you do not need to recreate the toolkit's sample context maps. For example:
+Add the reporter next to your existing reporters in the project's Playwright
+config. The path is relative to that config file:
 
-> Using the selected ticket and this repository's Playwright configuration,
-> create the missing login coverage. Inspect existing tests and assertions,
-> prepare an acceptance matrix, make focused changes, and run the relevant tests.
+~~~ts
+reporter: [
+  ['list'],
+  ['../playwright-agent/reporter/index.mjs', { task: 'LOGIN-123' }],
+],
+~~~
 
-The workflow supports five common tasks:
+Each `npx playwright test` run is then validated, saved under
+`artifacts/agent-tasks/LOGIN-123/portal/reports/` and the static report
+`playwright-agent-report/index.html` is rebuilt. Open that file directly or keep
+it as a CI artifact. Both folders are private and Git-ignored.
 
-| Task | Concrete outcome |
-| --- | --- |
-| Write tests | Inspect source and requirements, reuse project helpers, create focused missing scenarios and run the selected checks. |
-| Update tests | Modify the existing owning test/assertion for the requested behavior; preserve unrelated coverage and report any product gap. |
-| Acceptance and test-matrix review | Map criterion/source → scenario → actual test/assertion → supported, partial, missing or unknown; record runtime evidence separately. Keep assess-only requests read-only. |
-| Duplicate review | Compare role, preconditions, actions and assertions before proposing reuse or consolidation; matching titles or graph edges alone do not prove duplication. |
-| Mutation evidence | Explicitly configure bounded faults for a trusted local target, observe activation and repeated test outcomes, restore green, and retain private evidence. Ordinary onboarding does not start this optional execution. |
+- `task` defaults to `$PLAYWRIGHT_AGENT_TASK`, then `playwright-runs`.
+- `report: false` keeps saving runs without rebuilding the HTML.
+- `PLAYWRIGHT_AGENT_REPORT=off` disables the reporter for one run.
 
-The coding agent writes files through its native editing tools and runs your
-existing Playwright CLI/package commands. It must check that tests executed;
-skips, list commands and unrelated green suites do not establish acceptance.
-Keep private work-item documents and raw evidence in your project's ignored
-locations. Promote reviewed reusable lessons into its existing documentation.
+The reporter records what Playwright observed; it does not retry, edit tests or
+mark criteria as covered. Rebuild the report on demand, for example after saving
+agent findings or a mutation campaign:
 
-If requirements arrive as downloaded PRDs, Jira/RTM exports or narrative files,
-follow [local document intake](document-intake.md). From the toolkit, select the
-adopter with `--repo`, its private `--task` and explicit `--file` inputs. The host
-coding agent prepares source-linked criteria and handles any field mapping;
-the tester reviews readable criteria and questions rather than authoring JSON.
-Accept only after that exact review. Originals, source hashes and provenance
-remain private in the adopter's task; intake does not write tests or run them.
-After the requested analysis, test changes and checks finish, the host agent
-records its findings and attaches actual Playwright JSON and behavioral-mutation
-reports through the CLI. It opens the selected adopter's [read-only report
-viewer](portal.md) last, including assess-only, failed or partial outcomes.
-The viewer shows saved evidence, source quotations and the matrix. Document
-intake, interpretation review, file changes and execution stay in the agent
-chat and project CLIs; viewing a report does not establish acceptance.
+~~~sh
+npm run report -- --repo "../my-existing-project" [--task LOGIN-123] [--serve]
+~~~
 
-Your host coding agent uses its already selected model. Extra local or hosted
-decision models are optional advisory integrations, not a prerequisite for
-test authoring, matrix review or duplicate analysis. Optional Code Mode exposes
-only its configured quality tools; it does not invent browser exploration or
-generic test-writing APIs. See [the canonical workflow](../.agents/skills/playwright-agent/SKILL.md)
-and [optional integrations](../.agents/skills/playwright-agent/references/integrations.md).
+## Route one task
 
-Use the source ZIP without generated artifacts for onboarding. Run the
-[self-contained demo](../examples/validation-demo/README.md) separately when you
-want to inspect sample browser, graph and mutation evidence. The demo's synthetic
-results and known coverage gap are not claims about your application.
+Start with $playwright-agent or the Playwright Agent custom agent, identify the
+project and state the requested work. The [router](../.agents/skills/playwright-agent/SKILL.md)
+selects authoring, explicit assessment or explicit mutation verification.
+
+Authoring reuses the target's existing framework and includes focused checks.
+It does not require a formal matrix, document intake or a mutation campaign.
+Assessment stays read-only unless fixes were also requested; tests execute only
+when requested. Mutation keeps tests unchanged during each measurement and runs
+only selected faults in disposable application copies. Nonfunctional testing is
+outside this agent's scope.
+
+A sufficient prompt or existing requirement file needs no task card. For source
+documents needing extraction, use [intake](document-intake.md) with the adopter
+as --repo; preserve originals and review interpretations before acceptance.
+Do not force parsing or an acceptance workflow onto a small test edit.
+
+## Save findings and open the viewer last
+
+Use [portal analysis](portal.md) without --run for task-level findings. Attach the
+actual Playwright JSON or behavioral campaign when available. For an assessment
+of an existing intake version, use its --run UUID instead. Open the matching
+project's read-only viewer after the requested workflow, including failures and
+blocked work. Missing execution remains not run.
+
+The host session supplies the model, tools and permissions; no other model or
+provider is needed. Mutation configuration requires
+the actual source, startup, test scope and supported observation interface;
+copying the example config does not validate another application.

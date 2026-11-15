@@ -15,8 +15,7 @@ notices or a complete transitive software bill of materials.
 ## JavaScript dependencies
 
 Versions and license identifiers below are recorded in the current lockfiles.
-The root package, internal `quality/` module and optional Code Mode integration
-have separate lockfiles.
+The root package and internal `quality/` module have separate lockfiles.
 
 | Component | Locked version | Upstream license |
 | --- | --- | --- |
@@ -27,22 +26,14 @@ have separate lockfiles.
 | `@modelcontextprotocol/sdk` | 1.32.2 | MIT |
 | `zod` | 4.6.7 | MIT |
 | `tsx` | 4.23.15 | MIT |
-| `@utcp/code-mode` | 1.2.13 | MPL-2.0 |
-| `@utcp/sdk` | 1.1.0 | MPL-2.0 |
-| `isolated-vm` | 6.2.0 | ISC |
 
-The optional UTCP dependencies retain their MPL-2.0 license. They are referenced
-as packages, not converted to MIT by this repository's license.
+## Optional Python runtimes
 
-## Optional Python and model runtimes
-
-`quality/python/requirements*.txt` and `quality/python/requirements.lock`
-identify optional Python dependencies. Current direct pins include Laya 0.4.12,
-PyTorch 2.15.0, Transformers 5.22.1, Safetensors 0.8.0, PyYAML 6.0.3,
-OpenPyXL 3.1.5, xlrd 2.0.2 and pypdf 6.21.4. These packages retain their upstream
+`quality/python/requirements-*.txt` identify optional document-parser
+dependencies, including OpenPyXL, xlrd and pypdf. These packages retain their upstream
 licenses; consult their installed distributions for original notices. This
 inventory does not assert that all optional runtime combinations are installed
-or verified. Models and downloaded datasets are not supplied or licensed here.
+or verified.
 
 ## Source and fixture boundaries
 

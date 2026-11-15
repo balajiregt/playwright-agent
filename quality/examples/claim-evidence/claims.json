@@ -1,0 +1,243 @@
+{
+  "version": 1,
+  "taskId": "CLAIM-EVIDENCE-DEMO-001",
+  "evidenceKind": "synthetic",
+  "artifacts": [
+    {
+      "id": "requirements",
+      "file": "quality/examples/claim-evidence/requirements.md",
+      "sha256": "20211cfea03bbc12412f0938140f9d2ffa6755969525487e832d483bccc0da54"
+    },
+    {
+      "id": "unavailable-requirement",
+      "file": "quality/examples/claim-evidence/unavailable-requirement.md",
+      "sha256": "0000000000000000000000000000000000000000000000000000000000000000"
+    }
+  ],
+  "cases": [
+    {
+      "id": "CASE-01",
+      "clause": {
+        "artifactId": "requirements",
+        "quote": "After a successfully loaded workspace, a failed refresh removes every previous action card."
+      },
+      "claim": "This test asserts zero previous action cards after a failed refresh of an already loaded workspace.",
+      "test": {
+        "file": "quality/examples/claim-evidence/tests/case01.spec.ts",
+        "line": 2,
+        "column": 1,
+        "sha256": "0bb44423a8a0ceb220d0a646ec4d4b0df322e1bd34539d3189414bb8500a16e6"
+      }
+    },
+    {
+      "id": "CASE-02",
+      "clause": {
+        "artifactId": "requirements",
+        "quote": "After a successfully loaded workspace, a failed refresh removes every previous action card."
+      },
+      "claim": "This test asserts zero previous action cards after a failed refresh of an already loaded workspace.",
+      "test": {
+        "file": "quality/examples/claim-evidence/tests/case02.spec.ts",
+        "line": 2,
+        "column": 1,
+        "sha256": "4ce1b21eb5d252df61b043139c12a21593bdb6daad72d6d23f28ff0edd808acf"
+      }
+    },
+    {
+      "id": "CASE-03",
+      "clause": {
+        "artifactId": "requirements",
+        "quote": "After a successfully loaded workspace, a failed refresh removes every previous action card."
+      },
+      "claim": "This test asserts zero previous action cards after a failed refresh of an already loaded workspace.",
+      "test": {
+        "file": "quality/examples/claim-evidence/tests/case03.spec.ts",
+        "line": 2,
+        "column": 1,
+        "sha256": "c16f712a181e48ce8202111f2a796cfd0e893a63cfefda4674a9ca2642e56c6f"
+      }
+    },
+    {
+      "id": "CASE-04",
+      "clause": {
+        "artifactId": "requirements",
+        "quote": "Successful sign-in displays the dashboard and hides the login form."
+      },
+      "claim": "This test asserts the login form is hidden after successful sign-in.",
+      "test": {
+        "file": "quality/examples/claim-evidence/tests/case04.spec.ts",
+        "line": 2,
+        "column": 1,
+        "sha256": "ab57b6e7527f844749c5b11562d756140286344fe35211576e80f3a4431ac872"
+      }
+    },
+    {
+      "id": "CASE-05",
+      "clause": {
+        "artifactId": "requirements",
+        "quote": "Successful sign-in displays the dashboard and hides the login form."
+      },
+      "claim": "This test asserts the login form is hidden after successful sign-in.",
+      "test": {
+        "file": "quality/examples/claim-evidence/tests/case05.spec.ts",
+        "line": 2,
+        "column": 1,
+        "sha256": "3355db3f9703150bf611724e37a794a3d208dd503acd41c2a43fe02d12983485"
+      }
+    },
+    {
+      "id": "CASE-06",
+      "clause": {
+        "artifactId": "requirements",
+        "quote": "Successful sign-in displays the dashboard and hides the login form."
+      },
+      "claim": "This test asserts the login form is hidden after successful sign-in.",
+      "test": {
+        "file": "quality/examples/claim-evidence/tests/case06.spec.ts",
+        "line": 2,
+        "column": 1,
+        "sha256": "fdc716784f058ad16b5700d40fc46b094657c0afbe4b536223aec02bb2fada2f"
+      }
+    },
+    {
+      "id": "CASE-07",
+      "clause": {
+        "artifactId": "requirements",
+        "quote": "For a viewer session, the Admin Console must not be available."
+      },
+      "claim": "This test asserts a viewer cannot see the Admin Console action.",
+      "test": {
+        "file": "quality/examples/claim-evidence/tests/case07.spec.ts",
+        "line": 2,
+        "column": 1,
+        "sha256": "532f151687eec700cecf63783981e7be6a48be64d9f70243dc14eba727a77267"
+      }
+    },
+    {
+      "id": "CASE-08",
+      "clause": {
+        "artifactId": "requirements",
+        "quote": "For a viewer session, the Admin Console must not be available."
+      },
+      "claim": "This test asserts a viewer cannot see the Admin Console action.",
+      "test": {
+        "file": "quality/examples/claim-evidence/tests/case08.spec.ts",
+        "line": 2,
+        "column": 1,
+        "sha256": "77c6a93f4e07a70f322ceb5eb78674d46686a0d88479673a6690b3bf9538f741"
+      }
+    },
+    {
+      "id": "CASE-09",
+      "clause": {
+        "artifactId": "requirements",
+        "quote": "For a viewer session, the Admin Console must not be available."
+      },
+      "claim": "This test asserts a viewer cannot see the Admin Console action.",
+      "test": {
+        "file": "quality/examples/claim-evidence/tests/case09.spec.ts",
+        "line": 2,
+        "column": 1,
+        "sha256": "0fb882a150e971e101a473f15a50b65372f864b5eee3f3dadd3a3e25ce79ba92"
+      }
+    },
+    {
+      "id": "CASE-10",
+      "clause": {
+        "artifactId": "requirements",
+        "quote": "After a successfully loaded workspace, a failed refresh removes every previous action card."
+      },
+      "claim": "This test asserts zero previous action cards after a failed refresh of an already loaded workspace.",
+      "test": {
+        "file": "quality/examples/claim-evidence/tests/case10.spec.ts",
+        "line": 3,
+        "column": 1,
+        "sha256": "5fde06227418cf93bfb2cbfa8435324b27bd28d31612e2caaaefddc17b937b24"
+      }
+    },
+    {
+      "id": "CASE-11",
+      "clause": {
+        "artifactId": "requirements",
+        "quote": "After a successfully loaded workspace, a failed refresh removes every previous action card."
+      },
+      "claim": "This test asserts zero previous action cards after a failed refresh of an already loaded workspace.",
+      "test": {
+        "file": "quality/examples/claim-evidence/tests/case11.spec.ts",
+        "line": 2,
+        "column": 1,
+        "sha256": "71345866222ffec0de7e4b74b742fb5c8264c22e5080d416d777f62c0f3b5a5b"
+      }
+    },
+    {
+      "id": "CASE-12",
+      "clause": {
+        "artifactId": "requirements",
+        "quote": "A failed refresh must permanently delete every account."
+      },
+      "claim": "This test asserts zero previous action cards after a failed refresh of an already loaded workspace.",
+      "test": {
+        "file": "quality/examples/claim-evidence/tests/case12.spec.ts",
+        "line": 2,
+        "column": 1,
+        "sha256": "4ce1b21eb5d252df61b043139c12a21593bdb6daad72d6d23f28ff0edd808acf"
+      }
+    },
+    {
+      "id": "CASE-13",
+      "clause": {
+        "artifactId": "requirements",
+        "quote": "After a successfully loaded workspace, a failed refresh removes every previous action card."
+      },
+      "claim": "This test asserts zero previous action cards after a failed refresh of an already loaded workspace.",
+      "test": {
+        "file": "quality/examples/claim-evidence/tests/case13.spec.ts",
+        "line": 3,
+        "column": 1,
+        "sha256": "860360babe9b2cc3daca9811220a99c466f952b9c21d93a715ce2e53ea10f40f"
+      }
+    },
+    {
+      "id": "CASE-14",
+      "clause": {
+        "artifactId": "requirements",
+        "quote": "After a successfully loaded workspace, a failed refresh removes every previous action card."
+      },
+      "claim": "This test asserts zero previous action cards after a failed refresh of an already loaded workspace.",
+      "test": {
+        "file": "quality/examples/claim-evidence/tests/case14.spec.ts",
+        "line": 3,
+        "column": 1,
+        "sha256": "eaa926baa2763bee57e0eedcb9afe899dc14861d1288b70e7a46f40dc35b5d53"
+      }
+    },
+    {
+      "id": "CASE-15",
+      "clause": {
+        "artifactId": "requirements",
+        "quote": "After a successfully loaded workspace, a failed refresh removes every previous action card."
+      },
+      "claim": "This test asserts zero previous action cards after a failed refresh of an already loaded workspace.",
+      "test": {
+        "file": "quality/examples/claim-evidence/tests/case15.spec.ts",
+        "line": 2,
+        "column": 1,
+        "sha256": "0000000000000000000000000000000000000000000000000000000000000000"
+      }
+    },
+    {
+      "id": "CASE-16",
+      "clause": {
+        "artifactId": "unavailable-requirement",
+        "quote": "After a successfully loaded workspace, a failed refresh removes every previous action card."
+      },
+      "claim": "This test asserts zero previous action cards after a failed refresh of an already loaded workspace.",
+      "test": {
+        "file": "quality/examples/claim-evidence/tests/case16.spec.ts",
+        "line": 2,
+        "column": 1,
+        "sha256": "4ce1b21eb5d252df61b043139c12a21593bdb6daad72d6d23f28ff0edd808acf"
+      }
+    }
+  ]
+}

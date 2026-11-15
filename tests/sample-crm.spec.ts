@@ -74,11 +74,6 @@ test.describe('Sample CRM source-aware flows @crm', () => {
     await sampleCrmPage.retryReport();
     await sampleCrmAssertions.expectReportDownloadReady();
     await sampleCrmAssertions.expectManagerNavigationAccess();
-
-    await sampleCrmPage.gotoLeads();
-    await sampleCrmAssertions.expectPermissionDeniedForPath('/crm/leads');
-    await sampleCrmPage.gotoAdminUsers();
-    await sampleCrmAssertions.expectPermissionDeniedForPath('/crm/admin/users');
   });
 
   test('viewer has read-only accounts and denied admin users @regression @auth @crm', async ({

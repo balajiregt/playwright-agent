@@ -115,7 +115,7 @@ w.write(sys.argv[1])`,file]);
 });
 
 test('existing real XLS template preserves worksheet/row fields',{skip:!available('xlrd')},()=>{
- const result=extract(path.join(ROOT,'examples/team/requirements.xls'));
+ const result=extract(path.join(ROOT,'tests/fixtures/requirements.xls'));
  assert.ok(result.segments.some(s=>s.locator.sheet==='Requirements'&&s.locator.row===2&&s.fields?.criterion));
  assert.ok(!result.issues.some(i=>i.severity==='blocking'),JSON.stringify(result.issues));
 });
