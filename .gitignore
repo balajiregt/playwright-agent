@@ -62,3 +62,6 @@ target/
 # Retired private import path stays ignored if accidentally recreated.
 /quality/context-inputs/
 /quality/mutation.config.local.json
+
+# Disposable mutation copies (npm run mutate)
+.mutation-work/

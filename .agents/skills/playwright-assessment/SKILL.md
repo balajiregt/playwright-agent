@@ -5,45 +5,32 @@ description: Assess functional acceptance coverage, requirement traceability, te
 
 # Playwright assessment
 
-For explicitly requested requirement-to-assertion checks, use
-[the claim-evidence workflow](../../../docs/claim-evidence.md). Reuse the actual
-test/helper collector and selected provider. Exclude incomplete or stale evidence
-before inference, retain packet/source hashes and never infer whole-suite coverage
-from one selected test. Keep reference labels out of model inputs.
+Read-only unless fixes are also requested: no source or test edits, and no test
+runs or mutations unless asked.
 
-For explicitly requested evaluation scores, follow
-[evaluation reporting](../../../docs/evaluation-reports.md); no invented model
-confidence or score for missing/unreviewed evidence.
+1. **Index first.** When criteria are in a JSON file (`requirements` with `id` and
+   `criterion`, optional `roleAccess`), run from the Playwright Agent root:
 
-Use only for requested assessment. Follow the selected project's instructions
-and [router](../playwright-agent/SKILL.md). Leave application source and tests
-unchanged unless the user also requests fixes. Saving private findings is allowed;
-assessment alone does not authorize test execution or mutation.
+   ```bash
+   npm run coverage:matrix -- --project <playwright project dir> --criteria <criteria.json>
+   ```
 
-Make criterion/assertion judgments in the current host agent session; no second
-model is called. Keep those judgments separate from source evidence and runtime
-results. Missing helpers/evidence stay unknown.
-
-1. Select the relevant requirements and test scope. Extract documents only when
-   necessary using [intake](../../../docs/document-intake.md). Preserve source
-   quotations, conflicts and unknowns; source code describes implemented behavior,
-   not business approval.
-2. Inspect actual test bodies, helpers, fixtures, role/state setup and assertions.
-   Titles, graph edges, green reports and imported RTM labels do not prove coverage.
-3. For coverage/matrix work, map criterion/source → scenario/role/state → actual
-   assertion → supported/partial/missing/unknown → action/gap. Use the existing
+   It lists candidate tests per criterion with the roles each runs as and whether
+   it asserts a denial. It flags role rules ("only X can…") where an allowed role
+   is never exercised or another role is never checked for a denial. The index
+   is a pointer, not proof. Without a criteria file, find candidates by reading.
+2. **Judge from assertions.** For each criterion, open the candidate tests and
+   their helpers. Covered means an assertion would fail if this behaviour broke.
+   Check every clause: each named role, state, value and both sides of an
+   "only". Titles, flags, graph edges and green runs do not prove coverage.
+3. **Classify** each criterion as covered, partial, missing or unknown, with the
+   test reference and a one-line reason naming the missing clause. Use the
+   project's requested output format, or the
    [assessment template](../playwright-agent/assets/acceptance-report.md).
-   For duplicate-only review, report equivalence/differences and proposed action;
-   do not force a full acceptance matrix or remove tests.
-4. Keep runtime evidence separate and revision-matched. Run selected checks only
-   if requested; otherwise mark execution not run. A suspected weak assertion is
-   a finding, not authorization to execute mutations or advisory models.
-5. Save the analysis and any requested matrix in the existing private work-item
-   paths. With intake, preserve matrix headers and bind findings to its exact
-   version; without intake, use task-level findings. Open the
-   [report viewer](../../../docs/portal.md) last.
+4. Keep source quotes, judgments and any runtime evidence separate. A suspected
+   weak assertion is a finding. Proving it needs an explicit mutation request.
 
-If assessment and fixes were both requested, finish the findings first, then
-follow [test authoring](../playwright-test-authoring/SKILL.md) for the authorized
-changes and focused verification. Do not claim complete acceptance from static
-review or a passing unrelated suite.
+If fixes were also requested, finish the findings first, then use
+[test authoring](../playwright-test-authoring/SKILL.md). For document extraction
+or evidence packets, see [intake](../../../docs/document-intake.md) and
+[claim evidence](../../../docs/claim-evidence.md).

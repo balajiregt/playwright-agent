@@ -127,6 +127,24 @@ configuration as described in the harness guide.
 
 ## Quality tools
 
+The skills keep instructions short and hand repeatable work to deterministic tools:
+
+```bash
+# Would these tests catch this defect? Runs on a disposable copy, never the original.
+npm run mutate -- --project examples/crm-scale --file app/api.mjs \
+  --find "  const total = round2(raw);" --replace "  const total = Math.floor(raw);" --grep "quote totals"
+# → baselines green twice, faulted runs fail twice: VERDICT killed, original project unchanged: yes
+
+# Where is each criterion tested, and which role rules are never checked?
+npm run coverage:matrix -- --project examples/crm-scale \
+  --criteria examples/crm-scale/requirements/acceptance-criteria.json --flagged
+```
+
+`mutate` answers one question with two healthy baselines and two faulted runs
+(killed, survived, inconclusive or invalid). `coverage:matrix` is an index of
+candidate tests with their roles and denial checks; it points, and the assertions
+decide. `npm run tools:test` covers both.
+
 - [Quality module](quality/README.md): intake, claim checks, behavioral mutation runner and report viewer.
 - [Mutation workflow](quality/docs/behavioral-mutations.md): trusted local JS/TS targets, selected faults and configured probes; not universal application support.
 - [Optional integrations](.agents/skills/playwright-agent/references/integrations.md): claim checks and the mutation runner's CLI/MCP tools.

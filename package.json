@@ -44,7 +44,10 @@
     "quality:test": "npm --prefix quality test && node --test scripts/run-quality.test.mjs scripts/reporter.test.mjs",
     "agent:configure": "node scripts/configure-agent.mjs",
     "agent:test": "node --test scripts/configure-agent.test.mjs",
-    "eval": "node scripts/run-quality.mjs eval"
+    "eval": "node scripts/run-quality.mjs eval",
+    "mutate": "node scripts/mutate.mjs",
+    "coverage:matrix": "node scripts/coverage-matrix.mjs",
+    "tools:test": "node --test scripts/mutate.test.mjs scripts/coverage-matrix.test.mjs"
   },
   "devDependencies": {
     "@playwright/test": "1.62.1",
