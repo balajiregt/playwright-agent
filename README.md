@@ -18,6 +18,12 @@ Use your existing coding agent, project and test framework.
 **New here? Follow the [step-by-step onboarding guide](docs/getting-started.md).**
 Repository: [balajiregt/playwright-agent](https://github.com/balajiregt/playwright-agent).
 
+**History:** this repository began as the Agentic Playwright Harness
+(`playwright-harness-framework`; that code is tagged
+[`harness-v1`](https://github.com/balajiregt/playwright-agent/tree/harness-v1)).
+Paired trials showed its long instructions added little to Claude Opus, so it was
+rebuilt around deterministic tools. See [the evidence](docs/evidence.md).
+
 ## Start with your prompt
 
 Use $playwright-agent in your coding chat, or select Playwright Agent in Copilot.
