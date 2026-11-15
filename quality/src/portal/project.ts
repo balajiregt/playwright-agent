@@ -66,10 +66,10 @@ export async function taskList(repo:string):Promise<PortalTaskSummary[]>{
   if(!/^[A-Za-z0-9][A-Za-z0-9_.-]{0,79}$/.test(entry.name))continue;
   try{
    const detail=await taskDetail(repo,entry.name),run=detail.run;
-   const reportCount=detail.reports.tests.length+detail.reports.mutations.length;
-   const activity=[run?.createdAt,detail.analysis?.recordedAt,...detail.reports.tests.map(r=>r.importedAt),...detail.reports.mutations.map(r=>r.importedAt)];
-   result.push({id:entry.name,updatedAt:activity.filter((s):s is string=>Boolean(s)).sort().at(-1)??null,runId:run?.id??null,status:run?.stale?'Source changed':run?.blockingDocuments?'Blocked extraction':run?.accepted?'Interpretation accepted':run?'Needs review':detail.analysis?'Findings recorded':reportCount?'Reports only':'No saved evidence',criteria:run?.draft.requirements.length??0,openQuestions:run?.openQuestions??0,sources:run?.documents.length??0,testReports:detail.reports.tests.length,mutationReports:detail.reports.mutations.length});
-  }catch{result.push({id:entry.name,updatedAt:null,runId:null,status:'Evidence unavailable',criteria:0,openQuestions:0,sources:0,testReports:0,mutationReports:0});}
+   const reportCount=detail.reports.tests.length+detail.reports.mutations.length+detail.reports.coverage.length;
+   const activity=[run?.createdAt,detail.analysis?.recordedAt,...detail.reports.tests.map(r=>r.importedAt),...detail.reports.mutations.map(r=>r.importedAt),...detail.reports.coverage.map(r=>r.importedAt)];
+   result.push({id:entry.name,updatedAt:activity.filter((s):s is string=>Boolean(s)).sort().at(-1)??null,runId:run?.id??null,status:run?.stale?'Source changed':run?.blockingDocuments?'Blocked extraction':run?.accepted?'Interpretation accepted':run?'Needs review':detail.analysis?'Findings recorded':reportCount?'Reports only':'No saved evidence',criteria:run?.draft.requirements.length??0,openQuestions:run?.openQuestions??0,sources:run?.documents.length??0,testReports:detail.reports.tests.length,mutationReports:detail.reports.mutations.length,coverageReports:detail.reports.coverage.length});
+  }catch{result.push({id:entry.name,updatedAt:null,runId:null,status:'Evidence unavailable',criteria:0,openQuestions:0,sources:0,testReports:0,mutationReports:0,coverageReports:0});}
  }
  return result.sort((a,b)=>(b.updatedAt??'').localeCompare(a.updatedAt??'')||a.id.localeCompare(b.id));
 }

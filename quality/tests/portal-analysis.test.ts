@@ -52,7 +52,7 @@ test('task findings are inspectable without intake, inferred criteria or an acce
  const detail=await taskDetail(repo,'EDIT-1');
  assert.equal(detail.run,null);assert.deepEqual(detail.runs,[]);
  assert.equal(detail.analysis!.binding,'task');assert.match(detail.analysis!.text,/targeted execution not run/);
- assert.equal(detail.analysis!.intakeHash,undefined);assert.deepEqual(detail.reports,{tests:[],mutations:[]});
+ assert.equal(detail.analysis!.intakeHash,undefined);assert.deepEqual(detail.reports,{tests:[],mutations:[],coverage:[]});
  const summary=(await taskList(repo))[0];assert.equal(summary.status,'Findings recorded');assert.equal(summary.criteria,0);
  assert.equal((await readFile(path.join(path.dirname(result.file),'.gitignore'),'utf8')).trimEnd().split('\n').at(-1),'*');
  await writeFile(file,'Updated findings; execution still not run.');await recordAgentAnalysis({repo,taskId:'EDIT-1',file});

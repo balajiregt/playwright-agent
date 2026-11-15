@@ -2,7 +2,7 @@
 
 (() => {
   const $ = selector => document.querySelector(selector);
-  const tabs = [['overview','Overview'],['artifacts','Artifacts'],['criteria','Acceptance criteria'],['traceability','Traceability'],['tests','Test reports'],['mutations','Mutation reports']];
+  const tabs = [['overview','Overview'],['artifacts','Artifacts'],['criteria','Acceptance criteria'],['traceability','Traceability'],['coverage','Coverage index'],['tests','Test reports'],['mutations','Mutation reports']];
   const state = {project:null,tasks:[],detail:null,draft:null,tab:'overview',sourceId:null,busy:false,preview:false,overviewReport:{}};
   let fieldId=0,requestId=0,toastTimer,insight=null;
   // A static snapshot (portal report) embeds its evidence; the live viewer leaves this null and uses the local API.
@@ -219,7 +219,7 @@
     if(current?.stale)header.append(notice('The source material has changed',String(current.stale)+' The displayed snapshot and findings may be stale.','warning'));
     if(current?.accepted)header.append(notice('Accepted interpretation recorded','This records a requirements review. It does not establish product acceptance, assertion coverage or passing tests.'));
   }
-  function tabCount(id){return ({artifacts:run()?.documents.length,criteria:state.draft?.requirements.length,tests:state.detail?.reports.tests.length,mutations:state.detail?.reports.mutations.length})[id];}
+  function tabCount(id){return ({artifacts:run()?.documents.length,criteria:state.draft?.requirements.length,tests:state.detail?.reports.tests.length,mutations:state.detail?.reports.mutations.length,coverage:state.detail?.reports.coverage?.length})[id];}
   function renderTabs(){
     const bar=$('#tab-bar');bar.hidden=!state.detail;bar.replaceChildren();if(!state.detail)return;
     tabs.forEach(([id,title],index)=>bar.append(node('button',{type:'button',class:'tab',id:'tab-'+id,role:'tab','aria-selected':String(state.tab===id),'aria-controls':'view-panel',tabindex:state.tab===id?'0':'-1',onClick:()=>selectTab(id),onKeydown:event=>{let next;if(event.key==='ArrowRight')next=(index+1)%tabs.length;if(event.key==='ArrowLeft')next=(index+tabs.length-1)%tabs.length;if(event.key==='Home')next=0;if(event.key==='End')next=tabs.length-1;if(next!==undefined){event.preventDefault();selectTab(tabs[next][0],true);}}},title,tabCount(id)!==undefined?node('small',{},tabCount(id)):null)));
@@ -414,6 +414,35 @@
     const isTests=kind==='tests',reports=node('div',{id:'report-list'});renderReportCards(reports,kind);
     return node('div',{},node('div',{class:'section-title'},node('div',{},node('h2',{},isTests?'Playwright execution evidence':'Behavioral mutation evidence'),node('p',{},'Explore saved report outcomes, search records and inspect individual evidence.'))),reports);
   }
+  function candidateRef(c){return node('span',{class:'coverage-ref'},node('code',{},c.ref),' ',c.roles.length?c.roles.join(' + '):'no role',c.negative?badge('asserts denial','outline'):null);}
+  function roleGrid(row){
+    return node('div',{class:'table-wrap'},node('table',{class:'evidence-table coverage-roles'},node('thead',{},node('tr',{},...['Role','Expected','Checked by the suite?'].map(h=>node('th',{scope:'col'},h)))),
+     node('tbody',{},...row.roleChecks.map(check=>node('tr',{},node('td',{},node('strong',{},check.role)),node('td',{},check.expected==='allowed'?'can do it':'denied'),
+      node('td',{},check.checkedBy?badge('✓ '+check.checkedBy+(check.expected==='denied'?' asserts denial':' exercises it'),'good'):badge('✕ '+(check.expected==='denied'?'never checked':'never exercised'),'bad')))))));
+  }
+  function renderCoverage(){
+    const reports=state.detail.reports.coverage||[];
+    const intro=node('div',{class:'section-title'},node('div',{},node('h2',{},'Coverage index'),node('p',{},'Where each criterion is probably tested, and which role rules the suite never checks. Pointers to read, not proof of coverage.')));
+    if(!reports.length)return node('div',{},intro,empty('No coverage index attached','Run npm run coverage:matrix -- --project <dir> --criteria <criteria.json> --json --out matrix.json, then npm run portal -- attach --kind coverage --file matrix.json. Nothing is assumed covered.'));
+    return node('div',{},intro,...reports.map((report,index)=>{
+     const flagged=report.rows.filter(row=>row.flags.length),filter={text:''};
+     const body=node('tbody',{});
+     const fill=()=>{const q=filter.text.trim().toLowerCase();body.replaceChildren(...report.rows.filter(row=>!q||(row.id+' '+row.criterion+' '+row.candidates.map(c=>c.ref+' '+c.title).join(' ')).toLowerCase().includes(q)).map(row=>node('tr',{},
+      node('td',{},node('strong',{},row.id),node('p',{class:'muted'},row.criterion||'Criterion text not recorded')),
+      node('td',{},row.candidates.length?node('ul',{class:'coverage-list'},...row.candidates.map(c=>node('li',{},candidateRef(c),node('small',{class:'muted block'},c.title)))):badge('No candidate test','bad')),
+      node('td',{},row.flags.length?row.flags.map(f=>node('div',{},badge(f,'warning'))):'—'))));};
+     fill();
+     const all=node('details',{class:'details',open:index===0&&!flagged.length?'':undefined},node('summary',{},'All '+report.counts.criteria+' criteria'),
+      node('input',{type:'search','aria-label':'Filter criteria',placeholder:'Filter by ID, criterion or test…',class:'coverage-filter',onInput:event=>{filter.text=event.target.value;fill();}}),
+      node('div',{class:'table-wrap'},node('table',{class:'evidence-table'},node('thead',{},node('tr',{},...['Criterion','Candidate tests','Flags'].map(h=>node('th',{scope:'col'},h)))),body)));
+     return node('article',{class:'report-card'},reportHeader(report),
+      node('div',{class:'report-stats'},...[[report.counts.criteria,'Criteria'],[report.testsIndexed,'Tests indexed'],[report.counts.flagged,'Flagged leads'],[report.counts.roleRules,'Role rules'],[report.counts.noCandidate,'No candidate']].map(([value,label])=>node('div',{class:'report-stat'},node('small',{},label),node('strong',{},value)))),
+      flagged.length?node('section',{class:'coverage-flagged'},node('h3',{},'Flagged leads ('+flagged.length+')'),...flagged.map(row=>node('div',{class:'coverage-lead'},
+       node('div',{},node('strong',{},row.id),' ',...row.flags.map(f=>badge(f,'warning'))),node('p',{class:'muted'},row.criterion),
+       row.roleChecks.length?roleGrid(row):node('ul',{class:'coverage-list'},...row.candidates.map(c=>node('li',{},candidateRef(c))))))):node('p',{class:'muted'},'No flagged leads. Still read each candidate assertion before calling a criterion covered.'),
+      all,reportLimits(report));
+    }));
+  }
   function renderTestReports(){return renderReportTab('tests');}
   function renderMutationReports(){return renderReportTab('mutations');}
   function render(){
@@ -423,7 +452,7 @@
     renderTasks();renderHeader();renderTabs();renderContext();
     const panel=$('#view-panel');
     if(!state.detail){panel.removeAttribute('role');panel.removeAttribute('aria-labelledby');panel.replaceChildren(renderWelcome());return;}
-    const renderer={overview:renderOverview,artifacts:renderArtifacts,criteria:renderCriteria,traceability:renderTraceability,tests:renderTestReports,mutations:renderMutationReports};
+    const renderer={overview:renderOverview,artifacts:renderArtifacts,criteria:renderCriteria,traceability:renderTraceability,coverage:renderCoverage,tests:renderTestReports,mutations:renderMutationReports};
     panel.replaceChildren((renderer[state.tab]||renderOverview)());
   }
 

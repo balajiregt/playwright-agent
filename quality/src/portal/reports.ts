@@ -7,7 +7,7 @@ import {digest} from '../context.js';
 import {planSchema} from '../mutation/schema.js';
 import {healthy,classify,type Campaign,type Execution} from '../mutation/runner.js';
 import {campaignMetrics} from '../mutation/report.js';
-import type {TestReportView,MutationReportView,ExecutionSummary} from './types.js';
+import type {TestReportView,MutationReportView,CoverageReportView,ExecutionSummary} from './types.js';
 
 const MAX_BYTES=5*1024*1024,MAX_STORED_BYTES=8*1024*1024;
 const uuid=/^[a-f0-9]{8}-[a-f0-9]{4}-4[a-f0-9]{3}-[89ab][a-f0-9]{3}-[a-f0-9]{12}$/;
@@ -26,7 +26,15 @@ const campaignSchema=z.object({version:z.literal(1),kind:z.literal('playwright-b
  repositoryHash:z.string().regex(/^[a-f0-9]{64}$/).optional(),planHash:z.string().regex(/^[a-f0-9]{64}$/).optional(),scopeHash:z.string().regex(/^[a-f0-9]{64}$/).optional(),plan:planSchema,
  baseline:z.array(execution).max(5),restored:execution.nullable(),originalUnchanged:z.boolean(),wallMs:duration,
  faults:z.array(z.object({id:z.string(),requirementId:z.string(),status:faultStatus,reason:z.string().optional(),baselineProbe:z.string().optional(),mutantProbe:z.string().optional(),attempts:z.array(execution).max(5),killingTests:z.array(z.string()).max(10000)})).max(10)});
-const envelopeSchema=z.object({version:z.literal(1),id:z.string().regex(uuid),kind:z.enum(['playwright','mutation']),name:nameSchema,importedAt:date,sha256:z.string().regex(/^[a-f0-9]{64}$/),base64:z.string()}).strict();
+const ref=z.string().min(1).max(500),roleName=z.string().min(1).max(80);
+const coverageSchema=z.object({kind:z.literal('playwright-agent-coverage-matrix'),version:z.literal(1),createdAt:date,roles:z.array(roleName).max(50),tests:count,
+ rows:z.array(z.object({id:z.string().min(1).max(120),criterion:z.string().max(4000).optional(),
+  candidates:z.array(z.object({ref,title:z.string().max(1000),roles:z.array(roleName).max(50),negative:z.boolean()})).max(20),
+  roleChecks:z.array(z.object({role:roleName,expected:z.enum(['allowed','denied']),checkedBy:ref.nullable()})).max(50).optional(),
+  flags:z.array(z.string().max(500)).max(20)}).passthrough()).max(5000)}).passthrough();
+const reportKinds=['playwright','mutation','coverage'] as const;
+export type ReportKind=typeof reportKinds[number];
+const envelopeSchema=z.object({version:z.literal(1),id:z.string().regex(uuid),kind:z.enum(reportKinds),name:nameSchema,importedAt:date,sha256:z.string().regex(/^[a-f0-9]{64}$/),base64:z.string()}).strict();
 type Envelope=z.infer<typeof envelopeSchema>;
 const sha=(bytes:Buffer)=>createHash('sha256').update(bytes).digest('hex');
 const bounded=(value:string,max=500)=>value.replace(/[\u0000-\u0008\u000b\u000c\u000e-\u001f\u007f]/g,'').slice(0,max);
@@ -113,7 +121,19 @@ function mutationView(raw:unknown,e:Envelope):MutationReportView {
   faults:c.faults.map(f=>({id:bounded(f.id,120),requirementId:bounded(f.requirementId,120),criterion:bounded(c.plan.requirements.find(r=>r.id===f.requirementId)!.criterion,2000),description:bounded(c.plan.mutations.find(m=>m.id===f.id)!.description,1000),status:f.status,...(f.reason?{reason:bounded(f.reason,1000)}:{}),...(f.baselineProbe!==undefined?{baselineProbe:bounded(f.baselineProbe)}:{}),...(f.mutantProbe!==undefined?{mutantProbe:bounded(f.mutantProbe)}:{}),killingTests:f.killingTests.slice(0,50).map(v=>bounded(v)),killingTestCount:f.killingTests.length,attempts:f.attempts.map(executionSummary)})),
   limitations:[...limitations,'Partial and unknown fault outcomes remain recorded as such. Imported source/scope hashes do not authenticate the original application.']};
 }
-function view(bytes:Buffer,e:Envelope){const raw=parse(bytes);return e.kind==='playwright'?testView(raw,e):mutationView(raw,e);}
+function coverageView(raw:unknown,e:Envelope):CoverageReportView {
+ const c=coverageSchema.parse(raw);
+ if(new Set(c.rows.map(r=>r.id)).size!==c.rows.length)fail('duplicate criterion identities');
+ for(const r of c.rows)for(const check of r.roleChecks??[])if(check.checkedBy!==null&&!r.candidates.some(x=>x.ref===check.checkedBy))fail('role check cites a test that is not a listed candidate');
+ return {id:e.id,kind:'coverage',name:e.name,importedAt:e.importedAt,recordedAt:c.createdAt,roles:c.roles.map(r=>bounded(r,80)),testsIndexed:c.tests,
+  counts:{criteria:c.rows.length,flagged:c.rows.filter(r=>r.flags.length).length,noCandidate:c.rows.filter(r=>!r.candidates.length).length,roleRules:c.rows.filter(r=>r.roleChecks?.length).length},
+  rows:c.rows.map(r=>({id:bounded(r.id,120),criterion:bounded(r.criterion??'',2000),flags:r.flags.map(f=>bounded(f)),
+   candidates:r.candidates.map(x=>({ref:bounded(x.ref),title:bounded(x.title,300),roles:x.roles.map(v=>bounded(v,80)),negative:x.negative})),
+   roleChecks:(r.roleChecks??[]).map(x=>({role:bounded(x.role,80),expected:x.expected,checkedBy:x.checkedBy===null?null:bounded(x.checkedBy)}))})),
+  limitations:[...limitations,'A coverage index matches criterion words to test titles and bodies. It points to candidate tests; it does not prove that an assertion covers a criterion.',
+   'A role counts as checked when a candidate test runs as that role (and, for a denial, asserts one). Read the assertion before relying on it.']};
+}
+function view(bytes:Buffer,e:Envelope){const raw=parse(bytes);return e.kind==='playwright'?testView(raw,e):e.kind==='mutation'?mutationView(raw,e):coverageView(raw,e);}
 
 export async function reportsDirectory(repo:string,taskId:string,create=false):Promise<string|null>{
  if(!/^[A-Za-z0-9][A-Za-z0-9_.-]{0,79}$/.test(taskId))fail('invalid task ID');
@@ -142,11 +162,11 @@ async function stored(directory:string,id:string){
  if(bytes.toString('base64')!==e.base64||sha(bytes)!==e.sha256)fail('stored report bytes changed');
  view(bytes,e);return {e,bytes};
 }
-export async function attachReport({repo,taskId,kind,name,bytes}:{repo:string;taskId:string;kind:'playwright'|'mutation';name:string;bytes:Buffer}):Promise<{id:string}>{
+export async function attachReport({repo,taskId,kind,name,bytes}:{repo:string;taskId:string;kind:ReportKind;name:string;bytes:Buffer}):Promise<{id:string}>{
  if(!Buffer.isBuffer(bytes))fail('upload must contain JSON bytes');
  if(bytes.length===0||bytes.length>MAX_BYTES)fail('JSON must contain between 1 byte and 5 MiB');
  nameSchema.parse(name);
- const e:Envelope={version:1,id:randomUUID(),kind:z.enum(['playwright','mutation']).parse(kind),name,importedAt:new Date().toISOString(),sha256:sha(bytes),base64:bytes.toString('base64')};
+ const e:Envelope={version:1,id:randomUUID(),kind:z.enum(reportKinds).parse(kind),name,importedAt:new Date().toISOString(),sha256:sha(bytes),base64:bytes.toString('base64')};
  view(bytes,e); // Validate before creating private storage or copying bytes.
  const directory=await privateReportsDirectory(repo,taskId);
  await writeFile(path.join(directory,e.id+'.json'),JSON.stringify(e)+'\n',{flag:'wx',mode:0o600});
@@ -160,16 +180,16 @@ export async function privateReportsDirectory(repo:string,taskId:string):Promise
  if(previous.trimEnd().split(/\r?\n/).at(-1)!=='*')await appendFile(marker,(previous&&!previous.endsWith('\n')?'\n':'')+'# Private imported report evidence\n*\n',{mode:0o600});
  return directory;
 }
-export async function readReports(repo:string,taskId:string):Promise<{tests:TestReportView[];mutations:MutationReportView[]}>{
- const directory=await reportsDirectory(repo,taskId);if(!directory)return {tests:[],mutations:[]};
- const tests:TestReportView[]=[],mutations:MutationReportView[]=[];
+export async function readReports(repo:string,taskId:string):Promise<{tests:TestReportView[];mutations:MutationReportView[];coverage:CoverageReportView[]}>{
+ const directory=await reportsDirectory(repo,taskId);if(!directory)return {tests:[],mutations:[],coverage:[]};
+ const tests:TestReportView[]=[],mutations:MutationReportView[]=[],coverage:CoverageReportView[]=[];
  for(const entry of await readdir(directory,{withFileTypes:true})){
   if(!entry.name.endsWith('.json')||!uuid.test(entry.name.slice(0,-5)))continue;
   const {e,bytes}=await stored(directory,entry.name.slice(0,-5));
-  const result=view(bytes,e);if(result.kind==='playwright')tests.push(result);else mutations.push(result);
+  const result=view(bytes,e);if(result.kind==='playwright')tests.push(result);else if(result.kind==='mutation')mutations.push(result);else coverage.push(result);
  }
  const newest=(a:{importedAt:string;id:string},b:{importedAt:string;id:string})=>b.importedAt.localeCompare(a.importedAt)||a.id.localeCompare(b.id);
- return {tests:tests.sort(newest),mutations:mutations.sort(newest)};
+ return {tests:tests.sort(newest),mutations:mutations.sort(newest),coverage:coverage.sort(newest)};
 }
 export async function readReportFile(repo:string,taskId:string,reportId:string):Promise<{name:string;bytes:Buffer}>{
  if(!uuid.test(reportId))fail('invalid report ID');

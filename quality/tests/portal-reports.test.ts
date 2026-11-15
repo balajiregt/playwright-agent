@@ -51,8 +51,8 @@ test('Playwright imports retain honest expected/flaky/skipped counts and exact d
  assert.ok(!view.limitations.some(v=>v.includes('portal did not rerun')||v.includes('supplied by the uploader')));
  assert.deepEqual(await readReportFile(f.repo,taskId,id),{name:'../../original-results.json',bytes:raw});
  assert.deepEqual((await readdir(f.directory)).sort(),['.gitignore',id+'.json'].sort());
- assert.deepEqual(await readReports(f.repo,'OTHER-TASK'),{tests:[],mutations:[]});
- const other=path.join(f.temp,'other-project');await mkdir(other);assert.deepEqual(await readReports(other,taskId),{tests:[],mutations:[]});
+ assert.deepEqual(await readReports(f.repo,'OTHER-TASK'),{tests:[],mutations:[],coverage:[]});
+ const other=path.join(f.temp,'other-project');await mkdir(other);assert.deepEqual(await readReports(other,taskId),{tests:[],mutations:[],coverage:[]});
 });
 test('malformed, oversized, contradictory and non-JSON Playwright uploads are rejected before storage',async t=>{
  const f=await fixture(t);
@@ -151,4 +151,28 @@ test('corrupted or linked selected reports fail clearly and unrelated nested fil
  const metadata=JSON.parse(original.toString());metadata.name='unsafe\r\nname.json';await writeFile(file,JSON.stringify(metadata));await assert.rejects(readReportFile(f.repo,taskId,id),/corrupt or unsafe/);
  await writeFile(file,original);await rm(file);const outside=path.join(f.temp,'outside-report.json');await writeFile(outside,original);await symlink(outside,file);
  await assert.rejects(readReportFile(f.repo,taskId,id),/corrupt or unsafe/);await assert.rejects(readReports(f.repo,taskId),/corrupt or unsafe/);
+});
+function coverageMatrix(){
+ const candidates=[{ref:'audit.spec.ts:25',title:'manager is denied the audit log',roles:['manager'],negative:true}];
+ return {kind:'playwright-agent-coverage-matrix',version:1,createdAt:recorded,roles:['admin','manager','viewer'],tests:12,rows:[
+  {id:'PERM-AUDIT',criterion:'Only admins can read the audit log.',candidates,rule:{allowed:['admin'],denied:['manager','viewer']},
+   roleChecks:[{role:'admin',expected:'allowed',checkedBy:null},{role:'manager',expected:'denied',checkedBy:'audit.spec.ts:25'},{role:'viewer',expected:'denied',checkedBy:null}],
+   flags:['allowed role never exercised: admin','denial never checked for: viewer']},
+  {id:'AUTH-SIGNIN',criterion:'Every role can sign in.',candidates:[],rule:null,roleChecks:[],flags:['no candidate test found']}]};
+}
+test('coverage indexes are stored per task with role checks and kept as pointers, not coverage proof',async t=>{
+ const f=await fixture(t);
+ const {id}=await attachReport({repo:f.repo,taskId,kind:'coverage',name:'matrix.json',bytes:bytes(coverageMatrix())});
+ const reports=await readReports(f.repo,taskId);
+ assert.equal(reports.tests.length+reports.mutations.length,0);
+ const [view]=reports.coverage;assert.equal(view.id,id);
+ assert.deepEqual(view.counts,{criteria:2,flagged:2,noCandidate:1,roleRules:1});
+ assert.deepEqual(view.rows[0].roleChecks.map(c=>c.checkedBy),[null,'audit.spec.ts:25',null]);
+ assert.ok(view.limitations.some(l=>/does not prove/.test(l)));
+ const forged=coverageMatrix();forged.rows[0].roleChecks[0].checkedBy='invented.spec.ts:1';
+ await assert.rejects(attachReport({repo:f.repo,taskId,kind:'coverage',name:'forged.json',bytes:bytes(forged)}),/not a listed candidate/);
+ const duplicate=coverageMatrix();duplicate.rows[1].id='PERM-AUDIT';
+ await assert.rejects(attachReport({repo:f.repo,taskId,kind:'coverage',name:'dup.json',bytes:bytes(duplicate)}),/duplicate criterion/);
+ await assert.rejects(attachReport({repo:f.repo,taskId,kind:'coverage',name:'wrong.json',bytes:bytes({rows:[]})}));
+ assert.equal((await readReports(f.repo,taskId)).coverage.length,1);
 });

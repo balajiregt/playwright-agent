@@ -84,7 +84,10 @@ export function buildMatrix(criteria,tests,roles,{top=3,minScore=2}={}) {
       if(unexercised.length)flags.push(`allowed role never exercised: ${unexercised.join(', ')}`);
       if(unchecked.length)flags.push(`denial never checked for: ${unchecked.join(', ')}`);
     }
-    return {id:c.id,candidates,rule,flags};
+    // Per-role view for reports: who should be allowed or denied, and the first candidate that checks it.
+    const by=(r,neg)=>candidates.find(x=>x.roles.includes(r)&&x.negative===neg)?.ref??null;
+    const roleChecks=rule?[...rule.allowed.map(role=>({role,expected:'allowed',checkedBy:by(role,false)})),...rule.denied.map(role=>({role,expected:'denied',checkedBy:by(role,true)}))]:[];
+    return {id:c.id,criterion:c.criterion,candidates,rule,roleChecks,flags};
   });
 }
 
@@ -113,7 +116,7 @@ export function main(argv) {
   const testDir=path.join(opt.project,opt.tests);
   const tests=specFiles(testDir).flatMap(f=>parseSpec(readFileSync(f,'utf8'),path.relative(testDir,f),roles));
   const rows=buildMatrix(criteria,tests,roles);
-  const text=opt.json?JSON.stringify({roles,tests:tests.length,rows},null,1)+'\n':toMarkdown(rows,{flaggedOnly:opt.flagged});
+  const text=opt.json?JSON.stringify({kind:'playwright-agent-coverage-matrix',version:1,createdAt:new Date().toISOString(),roles,tests:tests.length,rows},null,1)+'\n':toMarkdown(rows,{flaggedOnly:opt.flagged});
   if(opt.out)writeFileSync(opt.out,text);else process.stdout.write(text);
 }
 

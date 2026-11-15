@@ -128,7 +128,7 @@ intake interpretation, add --run UUID to bind assessment findings to that exact
 version. The viewer cannot upload, edit, approve or execute work.
 [Report viewer](docs/portal.md).
 
-## Harness conventions and optional discovery
+## Harness conventions and legacy discovery graph
 
 Reuse the target's framework layers, auth setup and helpers. Prefer semantic
 locators, web-first assertions, focused changes and actual execution evidence.
@@ -136,8 +136,10 @@ The original [harness guide](docs/agent-workflow.md) covers specs, captures,
 page objects, fixtures, debugging and evidence. MCP and official Playwright
 agents are optional tool choices after task routing.
 
-Source/test/coverage/duplicate graphs support requested discovery or broad flow
-planning; they are suggestions, not proof of acceptance. Existing sample graph
+The source/test/coverage/duplicate graph (`npm run graph:view`) is a legacy
+discovery demo for the small sample CRM. Its "coverage" means a route or capture
+is mentioned by a test; it does not check criteria, roles or assertions. For
+acceptance coverage use `coverage:matrix` and the report's Coverage index tab. Existing sample graph
 commands use the CRM adapter. Configure the generic scanner or your own source
 manifest for a different application; do not run the sample as project validation.
 
@@ -169,6 +171,11 @@ npm run coverage:matrix -- --project examples/crm-scale \
 ![npm run mutate: hash, copy, baselines, fault, faulted runs, verdict](docs/diagrams/mutate-flow.svg)
 
 ![coverage:matrix flags a role rule checked for only two of five roles](docs/diagrams/coverage-matrix-example.svg)
+
+Attach the index to a work item (`npm run portal -- attach … --kind coverage --file
+matrix.json`, from `--json --out matrix.json`) and `npm run report` shows it in a
+**Coverage index** tab: flagged role rules as a role-by-role grid, and every
+criterion with its candidate tests. [Report viewer](docs/portal.md).
 
 `mutate` answers one question with two healthy baselines and two faulted runs
 (killed, survived, inconclusive or invalid). `coverage:matrix` is an index of

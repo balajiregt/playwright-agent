@@ -1,7 +1,7 @@
 import path from 'node:path';
 import {readFile,lstat} from 'node:fs/promises';
 import {startPortal} from './portal/server.js';
-import {attachReport} from './portal/reports.js';
+import {attachReport,type ReportKind} from './portal/reports.js';
 import {projectRoot,validTask,validRun,registeredRun} from './portal/project.js';
 import {recordAgentAnalysis} from './portal/analysis.js';
 import {buildStaticReport,DEFAULT_REPORT_DIR} from './portal/static-report.js';
@@ -9,7 +9,7 @@ import {buildStaticReport,DEFAULT_REPORT_DIR} from './portal/static-report.js';
 const help=`Playwright Agent local report viewer
   portal [serve] --repo PROJECT [--task LOGIN-123] [--port 8792]
   portal analysis --repo PROJECT --task LOGIN-123 [--run UUID] --file analysis.md
-  portal attach --repo PROJECT --task LOGIN-123 --kind playwright|mutation --file REPORT.json
+  portal attach --repo PROJECT --task LOGIN-123 --kind playwright|mutation|coverage --file REPORT.json
   portal report --repo PROJECT [--task LOGIN-123] [--out ${DEFAULT_REPORT_DIR}] [--serve] [--port 8792]
 
 report writes one self-contained index.html snapshot of the saved evidence
@@ -38,9 +38,9 @@ async function main(){
   console.log(JSON.stringify(await recordAgentAnalysis({...target,file}),null,2));return;
  }
  if(command==='attach'){
-  const kind=flags['--kind'];if(kind!=='playwright'&&kind!=='mutation'||!flags['--task']||!flags['--file'])throw Error('attach requires --task, --kind and --file');
+  const kind=flags['--kind'];if(!['playwright','mutation','coverage'].includes(kind)||!flags['--task']||!flags['--file'])throw Error('attach requires --task, --kind and --file');
   const file=path.resolve(flags['--file']),info=await lstat(file);if(!info.isFile()||info.isSymbolicLink()||info.size>5*1024*1024)throw Error('Select a regular JSON report of at most 5 MiB');
-  console.log(JSON.stringify(await attachReport({repo,taskId:validTask(flags['--task']),kind,name:path.basename(file),bytes:await readFile(file)}),null,2));return;
+  console.log(JSON.stringify(await attachReport({repo,taskId:validTask(flags['--task']),kind:kind as ReportKind,name:path.basename(file),bytes:await readFile(file)}),null,2));return;
  }
  if(command==='report'){
   const built=await buildStaticReport({repo,taskId:flags['--task']?validTask(flags['--task']):undefined,out:flags['--out']});

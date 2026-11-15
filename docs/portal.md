@@ -103,6 +103,18 @@ npm run portal -- attach --repo "../my-existing-project" --task LOGIN-123 --kind
 npm run portal -- attach --repo "../my-existing-project" --task LOGIN-123 --kind mutation --file "../my-existing-project/artifacts/mutations/RUN/campaign.json"
 ```
 
+To see where each criterion is probably tested and which role rules are never
+checked, attach a coverage index. It appears in the **Coverage index** tab with a
+role grid for every flagged rule:
+
+```sh
+npm run coverage:matrix -- --project "../my-existing-project" --criteria criteria.json --json --out matrix.json
+npm run portal -- attach --repo "../my-existing-project" --task LOGIN-123 --kind coverage --file matrix.json
+```
+
+The index matches criterion words to tests. It is a list of pointers to read,
+not proof that an assertion covers the criterion.
+
 These CLI commands store reports; they do not execute tests or mutations.
 `--file` is caller-relative. Select the project's actual reporter path and check
 the report's scope and freshness. Attach each result once. Missing or invalid
