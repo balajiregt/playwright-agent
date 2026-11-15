@@ -12,6 +12,8 @@ the questions that remain once they have:
    against the real application in disposable copies; a fault the suite misses
    is a concrete test gap.
 
+![Playwright Agent: a router skill loads one skill, which hands repeatable work to a tool](docs/diagrams/playwright-agent-overview.svg)
+
 Use your existing coding agent, project and test framework.
 **New here? Follow the [step-by-step onboarding guide](docs/getting-started.md).**
 Repository: [balajiregt/playwright-agent](https://github.com/balajiregt/playwright-agent).
@@ -43,6 +45,30 @@ Examples:
 Judgments are made by your coding agent's current model; no extra model, API key
 or hosted provider is used. [Routing and prompts](docs/playwright-agent.md) ·
 [Canonical router](.agents/skills/playwright-agent/SKILL.md).
+
+## Does it help? Measured, not claimed
+
+Each task ran twice with Claude Opus 5.5 on the same copy of
+[CRM-Scale](examples/crm-scale/) (11 modules, 5 roles, 216 tests, 90 criteria):
+once alone with all agent guidance removed, once with Playwright Agent. An
+independent oracle scored both, under rules frozen before any run.
+
+![How the value is measured](docs/diagrams/how-it-is-measured.svg)
+
+![Results: assessment shows no measurable difference; mutation proof adds safety](docs/diagrams/results-crm-scale.svg)
+
+- **Mutation proof: adds value.** Opus alone reached the right verdict too (11/12),
+  but edited the real application in all 12 runs. With `npm run mutate`, 12/12
+  correct and the original never touched.
+- **Assessment: no measurable difference.** 97.0% vs 93.6% gap recall, short of
+  the +10-point margin set in advance. Opus is already strong at reading tests.
+- **Authoring:** tied 4/4 in the earlier run, so it was not re-run.
+- **Cost:** level. An earlier, longer-prompt version cost more in 11 of 15 pairs;
+  shortening the guidance and moving work into tools removed that overhead.
+
+Limits: one model, one synthetic app, 27 pairs. Method, full results and every
+disclosed deviation: [evidence](docs/evidence.md). Rerun the paired method before
+relying on it for a different stack.
 
 ## Configure an existing project once
 
@@ -139,6 +165,10 @@ npm run mutate -- --project examples/crm-scale --file app/api.mjs \
 npm run coverage:matrix -- --project examples/crm-scale \
   --criteria examples/crm-scale/requirements/acceptance-criteria.json --flagged
 ```
+
+![npm run mutate: hash, copy, baselines, fault, faulted runs, verdict](docs/diagrams/mutate-flow.svg)
+
+![coverage:matrix flags a role rule checked for only two of five roles](docs/diagrams/coverage-matrix-example.svg)
 
 `mutate` answers one question with two healthy baselines and two faulted runs
 (killed, survived, inconclusive or invalid). `coverage:matrix` is an index of

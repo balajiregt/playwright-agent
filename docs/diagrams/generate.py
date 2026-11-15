@@ -135,4 +135,41 @@ s.text(90, 520, "$ npm run mutate -- --project examples/crm-scale --file app/api
 s.text(90, 552, "VERDICT: killed · caught by quotes.spec.ts › quote totals: cents round half up · original project unchanged: yes", 16, C["green"][1], mono=True)
 s.save("mutate-flow", "npm run mutate hashes the original project, copies it, runs two green baselines, applies one fault to the copy, "
        "runs the tests twice and reports killed, survived, inconclusive or invalid, then proves the original unchanged.")
+# 3. Results: CRM-Scale tools-first extension (evidence/trials/crm-scale/EXTENSION.md, Opus 5.5)
+s = Svg(1400, 800, "What it added to Claude Opus", "CRM-Scale paired trials, rules frozen before the runs · grey = Opus alone · teal = Opus + Playwright Agent")
+GREY, TEAL = ("#3a4a66", "#9fb0c8"), ("#2bb3a3", "#2bb3a3")
+
+
+def bars(x, y, title, verdict, vkind, items):
+    """items: (label, base value 0-1, base text, framework value 0-1, framework text)."""
+    s.box(x, y, 620, 300, "neutral", title)
+    s.text(x + 600, y + 34, verdict, 16, MUTED if vkind == "neutral" else C[vkind][1], 700, "end")
+    for i, (label, b, bt, f, ft) in enumerate(items):
+        yy = y + 78 + i * 72
+        s.text(x + 20, yy + 14, label, 16, MUTED)
+        for j, (val, txt, (fill, ink)) in enumerate(((b, bt, GREY), (f, ft, TEAL))):
+            by = yy + 24 + j * 20
+            s.parts.append(f'<rect x="{x + 20}" y="{by}" width="{max(4, 420 * val):.0f}" height="14" rx="4" fill="{fill}"/>')
+            s.text(x + 452, by + 13, txt, 15, ink if j else MUTED, 600 if j else 400)
+
+
+bars(60, 150, "Assessment · 15 pairs", "no measurable difference", "neutral", [
+    ("Gap recall (all criteria)", .936, "93.6% (247/264)", .970, "97.0% (256/264)"),
+    ("The 4 role-permission gaps", 44 / 60, "44 / 60", 52 / 60, "52 / 60"),
+    ("Median cost per run", 1.20 / 1.5, "$1.20", 1.14 / 1.5, "$1.14")])
+bars(720, 150, "Mutation proof · 12 pairs", "Playwright Agent adds value", "green", [
+    ("Correct verdict, proven by execution", 11 / 12, "11 / 12", 1, "12 / 12"),
+    ("Safe method (real source never edited)", 0, "0 / 12", 1, "12 / 12"),
+    ("Median cost per run", .45 / .6, "$0.45", .41 / .6, "$0.41")])
+s.box(60, 490, 1280, 250, "neutral", "Read it carefully", [])
+for i, t in enumerate([
+        "Assessment: +3.4 points recall and 8 pair wins to 3 losses, short of the +10-point margin fixed in advance.",
+        "The coverage:matrix tool ran in only 3 of 15 runs, so it does not explain the role-gap gain.",
+        "Mutation: Opus alone edited the real application in all 12 runs (and restored it); with Playwright Agent, 0 of 12.",
+        "Cost was level (assessment: no measurable efficiency difference). Phase 2's version cost more in 11 of 15 pairs.",
+        "One model, one synthetic app, 27 pairs. Authoring was not re-run: Phase 2 tied 4 / 4."]):
+    s.text(90, 572 + i * 32, "• " + t, 17, MUTED)
+s.save("results-crm-scale", "Paired trials on CRM-Scale with Claude Opus 5.5. Assessment, 15 pairs: gap recall 93.6% alone and 97.0% "
+       "with Playwright Agent, no measurable difference under the frozen rules. Mutation proof, 12 pairs: correct verdicts 11 and 12, "
+       "safe method 0 of 12 alone and 12 of 12 with Playwright Agent. Median cost was level.")
 print("ok")
