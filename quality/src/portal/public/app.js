@@ -453,7 +453,7 @@
     const panel=$('#view-panel');
     if(!state.detail){panel.removeAttribute('role');panel.removeAttribute('aria-labelledby');panel.replaceChildren(renderWelcome());return;}
     const renderer={overview:renderOverview,artifacts:renderArtifacts,criteria:renderCriteria,traceability:renderTraceability,coverage:renderCoverage,tests:renderTestReports,mutations:renderMutationReports};
-    panel.replaceChildren((renderer[state.tab]||renderOverview)());
+    panel.replaceChildren((Object.hasOwn(renderer,state.tab)?renderer[state.tab]:renderOverview)());
   }
 
   $('#close-insight').addEventListener('click',()=>$('#insight-dialog').close());

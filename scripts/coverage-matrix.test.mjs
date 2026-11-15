@@ -56,3 +56,10 @@ test('criteria files may use a requirements or a criteria array, and anything el
   writeFileSync(path.join(dir,'bad.json'),'{"items":[]}');
   assert.throws(()=>main(['--project',dir,'--criteria',path.join(dir,'bad.json')]),/requirements or criteria array/);
 });
+
+test('role names are matched literally, never as regular expressions', () => {
+  assert.doesNotThrow(() => restriction('Only admins can export', ['admin', 'c(d', 'a+']));
+  // Unescaped, the role 'a+' would match the word 'aaa'.
+  assert.deepEqual(restriction('Only aaa can export', ['a+', 'aaa']).allowed, ['aaa']);
+  assert.deepEqual(restriction('Only admins can export', ['admin', 'adm.n']).allowed, ['admin']);
+});

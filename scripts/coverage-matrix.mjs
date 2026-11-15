@@ -36,6 +36,9 @@ function matchClose(text,open) {
   return text.length;
 }
 
+// Role names come from the criteria file or --roles: match them literally.
+const esc=s=>s.replace(/[.*+?^${}()|[\]\\]/g,'\\$&');
+
 export function parseSpec(text,file,roles) {
   const loops=[];
   for(const m of text.matchAll(/for\s*\(\s*const\s+(.+?)\s+of\s+([\w.[\]'", ]+?)\s*\)\s*\{/g)) {
@@ -46,9 +49,9 @@ export function parseSpec(text,file,roles) {
     const open=text.indexOf('(',m.index),end=matchClose(text,open),body=text.slice(m.index,end);
     const line=text.slice(0,m.index).split('\n').length;
     const found=new Set();
-    for(const r of roles)if(new RegExp(`['"\`]${r}['"\`]`).test(body))found.add(r);
+    for(const r of roles)if(new RegExp(`['"\`]${esc(r)}['"\`]`).test(body))found.add(r);
     for(const loop of loops.filter(l=>l.start<m.index&&m.index<l.end&&/role/i.test(l.binding))) {
-      const literal=roles.filter(r=>new RegExp(`['"]${r}['"]`).test(loop.source));
+      const literal=roles.filter(r=>new RegExp(`['"]${esc(r)}['"]`).test(loop.source));
       (literal.length?literal:roles).forEach(r=>found.add(r));  // an imported ROLES list covers every role
     }
     const urls=[...body.matchAll(/['"`](\/[a-z][\w/-]*)/g)].map(u=>u[1]);
@@ -61,8 +64,8 @@ export function parseSpec(text,file,roles) {
 export function restriction(criterion,roles) {
   const text=criterion.toLowerCase();
   const only=text.match(/\bonly\s+((?:[a-z]+(?:,\s*|\s+and\s+|\s+or\s+))*[a-z]+)/);
-  if(only){const allowed=roles.filter(r=>new RegExp(`\\b${r}s?\\b`).test(only[1]));if(allowed.length)return {allowed,denied:roles.filter(r=>!allowed.includes(r))};}
-  const cannot=roles.filter(r=>new RegExp(`(^|[.;,:]\\s*|\\band\\s+)${r}s?(\\s+users?)?\\s+(cannot|can't|can not|may not|must not)\\b`).test(text));
+  if(only){const allowed=roles.filter(r=>new RegExp(`\\b${esc(r)}s?\\b`).test(only[1]));if(allowed.length)return {allowed,denied:roles.filter(r=>!allowed.includes(r))};}
+  const cannot=roles.filter(r=>new RegExp(`(^|[.;,:]\\s*|\\band\\s+)${esc(r)}s?(\\s+users?)?\\s+(cannot|can't|can not|may not|must not)\\b`).test(text));
   if(cannot.length)return {allowed:[],denied:cannot};
   return null;
 }
