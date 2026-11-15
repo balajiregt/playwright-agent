@@ -1,6 +1,9 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import {buildMatrix,parseSpec,restriction,toMarkdown} from './coverage-matrix.mjs';
+import {mkdtempSync,mkdirSync,writeFileSync} from 'node:fs';
+import {tmpdir} from 'node:os';
+import path from 'node:path';
+import {buildMatrix,main,parseSpec,restriction,toMarkdown} from './coverage-matrix.mjs';
 
 const ROLES=['admin','manager','sales','viewer'];
 const SPEC=`
@@ -41,4 +44,15 @@ test('a role rule flags unexercised allowed roles and unchecked denials', () => 
   const [none]=buildMatrix([{id:'X',criterion:'Invoices export to spreadsheet format.'}],tests,ROLES,{minScore:0.5});
   assert.deepEqual(none.flags,['no candidate test found']);
   assert.match(toMarkdown([row,none],{flaggedOnly:true}),/2 criteria; 2 flagged/);
+});
+
+test('criteria files may use a requirements or a criteria array, and anything else is refused', () => {
+  const dir=mkdtempSync(path.join(tmpdir(),'matrix-'));
+  mkdirSync(path.join(dir,'tests'));writeFileSync(path.join(dir,'tests/a.spec.ts'),SPEC);
+  for(const [name,body] of [['r.json',{requirements:[{id:'A',criterion:'x'}]}],['c.json',{criteria:[{id:'A',criterion:'x'}],roleAccess:{admin:[]}}]]) {
+    writeFileSync(path.join(dir,name),JSON.stringify(body));
+    assert.doesNotThrow(()=>main(['--project',dir,'--criteria',path.join(dir,name),'--out',path.join(dir,'out.md')]));
+  }
+  writeFileSync(path.join(dir,'bad.json'),'{"items":[]}');
+  assert.throws(()=>main(['--project',dir,'--criteria',path.join(dir,'bad.json')]),/requirements or criteria array/);
 });

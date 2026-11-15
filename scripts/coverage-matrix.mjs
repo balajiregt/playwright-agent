@@ -8,7 +8,7 @@
 //   npm run coverage:matrix -- --project examples/crm-scale \
 //     --criteria examples/crm-scale/requirements/acceptance-criteria.json [--tests tests] [--json] [--flagged]
 //
-// Criteria JSON: {requirements:[{id, criterion}], roleAccess?:{role:[…]}} or a bare array.
+// Criteria JSON: {requirements|criteria:[{id, criterion}], roleAccess?:{role:[…]}} or a bare array.
 // Roles come from roleAccess keys or --roles admin,manager,…
 import {readFileSync,readdirSync,statSync,writeFileSync} from 'node:fs';
 import path from 'node:path';
@@ -107,7 +107,8 @@ export function main(argv) {
   const opt={tests:'tests'};
   for(let i=0;i<argv.length;i++){const a=argv[i];if(a==='--json'||a==='--flagged')opt[a.slice(2)]=true;else if(a.startsWith('--'))opt[a.slice(2)]=argv[++i];else throw Error(`Unknown argument ${a}`);}
   if(!opt.project||!opt.criteria)throw Error('Usage: coverage-matrix --project <dir> --criteria <json> [--tests tests] [--roles a,b] [--json] [--flagged] [--out file]');
-  const data=JSON.parse(readFileSync(opt.criteria,'utf8')),criteria=Array.isArray(data)?data:data.requirements;
+  const data=JSON.parse(readFileSync(opt.criteria,'utf8')),criteria=Array.isArray(data)?data:data.requirements??data.criteria;
+  if(!Array.isArray(criteria))throw Error('Criteria JSON needs a requirements or criteria array of {id, criterion}');
   const roles=opt.roles?opt.roles.split(','):Object.keys(data.roleAccess??{});
   const testDir=path.join(opt.project,opt.tests);
   const tests=specFiles(testDir).flatMap(f=>parseSpec(readFileSync(f,'utf8'),path.relative(testDir,f),roles));
