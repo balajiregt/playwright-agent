@@ -13,6 +13,9 @@ const skills = {
   'playwright-mutation': 'Verify reviewed application faults against unchanged tests only when explicitly requested.'
 };
 const copilotName = '.github/agents/playwright.agent.md';
+// Explicit-only skills: Codex reads agents/openai.yaml, Claude Code reads front matter.
+const explicitOnly = new Set(['playwright-assessment', 'playwright-mutation']);
+const clients = { codex: ['codex'], copilot: ['copilot'], claude: ['claude'], both: ['codex', 'copilot'], all: ['codex', 'copilot', 'claude'] };
 const portable = value => value.split(path.sep).join('/');
 const inside = (root, file) => file.startsWith(root + path.sep);
 
@@ -55,7 +58,8 @@ Use the host coding agent's existing model, file edits, terminal and available b
 
 export async function configureAgent({ repo, playwrightConfig = 'playwright.config.ts', client = 'both', toolkitRoot = defaultToolkit }) {
   if (!repo) throw new Error('--repo is required');
-  if (!['codex', 'copilot', 'both'].includes(client)) throw new Error('--client must be codex, copilot or both');
+  if (!Object.hasOwn(clients, client)) throw new Error('--client must be codex, copilot, claude, both (codex and copilot) or all');
+  const selected = new Set(clients[client]);
   const target = await fs.realpath(path.resolve(repo));
   if (!(await fs.stat(target)).isDirectory()) throw new Error('--repo must select an existing repository directory');
   const toolkit = await fs.realpath(path.resolve(toolkitRoot));
@@ -91,17 +95,26 @@ export async function configureAgent({ repo, playwrightConfig = 'playwright.conf
   }
   const localConfig = { version: 1, toolkitPath, playwrightConfig: relativeConfig };
   const planned = [{ file: configName, content: JSON.stringify(localConfig, null, 2) + '\n', json: localConfig }];
-  if (client === 'codex' || client === 'both') {
+  if (selected.has('codex')) {
     for (const [name, description] of Object.entries(skills)) {
       const file = '.agents/skills/'+name+'/SKILL.md';
       const link = portable(path.relative(path.dirname(path.join(target, file)), path.join(toolkit, file)));
       planned.push({file, content: `---\nname: ${name}\ndescription: ${description}\n---\n\n${guidance(link, relativeConfig)}`});
-      if (name === 'playwright-assessment' || name === 'playwright-mutation') {
+      if (explicitOnly.has(name)) {
         planned.push({file: '.agents/skills/'+name+'/agents/openai.yaml', content: 'policy:\n  allow_implicit_invocation: false\n'});
       }
     }
   }
-  if (client === 'copilot' || client === 'both') {
+  if (selected.has('claude')) {
+    // Claude Code discovers project skills in .claude/skills; no CLAUDE.md edit is needed.
+    for (const [name, description] of Object.entries(skills)) {
+      const file = '.claude/skills/'+name+'/SKILL.md';
+      const link = portable(path.relative(path.dirname(path.join(target, file)), path.join(toolkit, '.agents/skills', name, 'SKILL.md')));
+      const only = explicitOnly.has(name) ? 'disable-model-invocation: true\n' : '';
+      planned.push({file, content: `---\nname: ${name}\ndescription: ${description}\n${only}---\n\n${guidance(link, relativeConfig)}`});
+    }
+  }
+  if (selected.has('copilot')) {
     const link = portable(path.relative(path.dirname(path.join(target, copilotName)), canonicalSkill));
     planned.push({ file: copilotName, content: `---\nname: Playwright Agent\ndescription: Route this project's functional Playwright work to the requested task skill.\n---\n\n${guidance(link, relativeConfig)}` });
   }
@@ -144,7 +157,7 @@ function parseArgs(args) {
   for (let i = 0; i < args.length; i += 2) {
     const key = names[args[i]];
     if (!key || !args[i + 1] || args[i + 1].startsWith('--') || result[key] !== undefined) {
-      throw new Error('Usage: node scripts/configure-agent.mjs --repo PATH [--playwright-config RELATIVE_FILE] [--client codex|copilot|both]');
+      throw new Error('Usage: node scripts/configure-agent.mjs --repo PATH [--playwright-config RELATIVE_FILE] [--client codex|copilot|claude|both|all]');
     }
     result[key] = args[i + 1];
   }

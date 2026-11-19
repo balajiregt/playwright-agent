@@ -157,3 +157,30 @@ test('symlinked destination parents are refused and choosing the second client l
     assert.equal(result.gitignoreUpdated, false);
   } finally { await fs.rm(f.root, { recursive: true, force: true }); }
 });
+
+test('claude installs project skills that resolve to the toolkit, explicit-only where Codex is', async () => {
+  const f = await fixture();
+  try {
+    const before = await snapshot(f.repo);
+    const result = await configureAgent({ ...f, client: 'claude' });
+    assert.deepEqual(result.created.sort(), ['.playwright-agent.local.json', ...names.map(n => '.claude/skills/' + n + '/SKILL.md')].sort());
+    for (const name of names) {
+      const file = path.join(f.repo, '.claude/skills', name, 'SKILL.md'), content = await fs.readFile(file, 'utf8');
+      const front = parse(content.split('---')[1]);
+      assert.equal(front.name, name);
+      assert.ok(front.description);
+      assert.equal(front['disable-model-invocation'] === true, name === 'playwright-assessment' || name === 'playwright-mutation');
+      assert.ok(!content.includes(f.repo) && !content.includes(f.toolkitRoot));
+      const link = content.match(/workflow\]\(<(.+)>\)/)?.[1];
+      assert.ok(link && !path.isAbsolute(link));
+      assert.equal(await fs.realpath(path.resolve(path.dirname(file), link)), await fs.realpath(path.join(f.toolkitRoot, '.agents/skills', name, 'SKILL.md')));
+    }
+    const after = await snapshot(f.repo);
+    for (const name of ['AGENTS.md', 'package.json', 'playwright.config.ts', 'tests/login.spec.ts']) assert.equal(after[name], before[name]);
+    assert.ok(!Object.keys(after).some(name => name === 'CLAUDE.md'));
+    const all = await configureAgent({ ...f, client: 'all' });
+    assert.equal(all.created.length, 7);
+    assert.equal(all.unchanged.length, 5);
+    await assert.rejects(configureAgent({ ...f, client: 'cursor' }), /--client must be/);
+  } finally { await fs.rm(f.root, { recursive: true, force: true }); }
+});

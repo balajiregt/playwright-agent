@@ -26,7 +26,7 @@ rebuilt around deterministic tools. See [the evidence](docs/evidence.md).
 
 ## Start with your prompt
 
-Use $playwright-agent in your coding chat, or select Playwright Agent in Copilot.
+Use $playwright-agent in Codex, /playwright-agent in Claude Code, or select Playwright Agent in Copilot.
 The router reads your request and exclusions, then loads only the relevant skill.
 
 | Request | Workflow |
@@ -84,11 +84,12 @@ configuration, page objects and fixtures stay in the adopting repository.
 ~~~sh
 npm ci
 npm ci --prefix quality
-npm run agent:configure -- --repo /path/to/your-playwright-project --client both
+npm run agent:configure -- --repo /path/to/your-playwright-project --client all
 ~~~
 
 The target must already declare @playwright/test and contain a Playwright config.
-Use --playwright-config for another existing config path. Onboarding creates
+`all` covers Claude Code, Codex and Copilot; `claude`, `codex` or `copilot`
+selects one. Use --playwright-config for another existing config path. Onboarding creates
 project-local skill shims and/or a Copilot entrypoint, plus an ignored relative
 toolkit configuration. It does not install a framework, select a task, run tests,
 or overwrite conflicting files. Existing adopters must review changed shims
