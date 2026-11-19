@@ -184,7 +184,12 @@ matrix.json`, from `--json --out matrix.json`) and `npm run report` shows it in 
 criterion with its candidate tests. [Report viewer](docs/portal.md).
 
 `mutate` answers one question with two healthy baselines and two faulted runs
-(killed, survived, inconclusive or invalid). `coverage:matrix` is an index of
+(killed, survived, inconclusive or invalid). The example above breaks the bundled
+CRM-Scale app; on your app you point `--project` at your Playwright project and
+write a find/replace that breaks one of your rules, or ask your agent to. Your
+tests must start the app from that project's source (not a deployed URL), or every
+fault falsely survives: see [using mutate on your own app](docs/getting-started.md#one-fault-npm-run-mutate).
+`coverage:matrix` is an index of
 candidate tests with their roles and denial checks; it points, and the assertions
 decide. `npm run tools:test` covers both.
 

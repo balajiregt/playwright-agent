@@ -161,8 +161,86 @@ Details: [document intake](document-intake.md) ·
 
 Mutation verification injects small, **requirement-breaking** changes into a
 disposable copy of your application and checks whether your unchanged tests
-fail. It needs JavaScript/TypeScript application source and a local app startup
-that your Playwright config can launch.
+fail. There are two ways: one fault at a time with `npm run mutate`, or a
+reviewed campaign of many faults with `npm run mutation`.
+
+### Before either: your tests must run against the copy
+
+The fault exists only in a copy of your project, so Playwright must start the app
+**from that copy's source**. That means your app's source and your Playwright
+config live in the folder you pass as `--project`, and the config's `webServer`
+starts the app from it.
+
+| Your setup | Works? |
+| --- | --- |
+| App source and tests in one repo; `webServer` starts the app | Yes |
+| Tests point at a deployed URL (staging, production) | **No.** The fault never reaches that app, so every fault falsely "survives" |
+| App and tests in separate repos | Only if `--project` is a folder holding both |
+| `reuseExistingServer: true` with a dev server already running | Stop the server first, or set it to `false`; otherwise tests hit the unbroken app |
+
+Install your project's dependencies first, and add `.mutation-work/` to your
+project's `.gitignore` (the copy is made there). Compiled apps need the build in
+the `webServer` command so the copy is rebuilt.
+
+### One fault: `npm run mutate`
+
+Use this to answer one question, such as "would our tests notice if free shipping
+stopped applying over ₹5,000?"
+
+1. Find the code that implements the rule:
+
+   ```ts
+   // src/pricing.ts
+   const shipping = total > 5000 ? 0 : 99;
+   ```
+
+2. Write the fault as an exact find and replace. The find text must occur exactly
+   once in that file. Then run, from the toolkit folder:
+
+   ```sh
+   npm run mutate -- --project ../my-project \
+     --file src/pricing.ts \
+     --find "total > 5000 ? 0 : 99" \
+     --replace "total > 5000 ? 99 : 99" \
+     --grep "shipping"
+   ```
+
+   `--file` is relative to `--project`. `--grep` or `--test tests/checkout.spec.ts`
+   narrows the tests (optional, faster). If your app reads its port from a
+   variable, add `--env PORT=4399`. A fault that changes several places goes in a
+   file: `--fault fault.json` with `{"edits":[{"file","find","replace"}, …]}`.
+
+3. Read the verdict:
+
+   | Verdict | Meaning |
+   | --- | --- |
+   | killed | The same named tests failed in both faulted runs: the rule is protected |
+   | survived | Every test passed with the fault: a test gap, once confirmed (below) |
+   | inconclusive | The baseline wasn't green twice, or results were unstable: no conclusion |
+   | invalid | The find text didn't match exactly once |
+
+   Every run ends with `original project unchanged: yes`; the fault only ever
+   exists in the copy.
+
+4. Confirm a survivor before reporting it as a gap. Re-run with `--keep`, open the
+   kept copy's app (or call its API) and see the broken behaviour yourself, then
+   delete `.mutation-work/`. An unobserved survivor stays inconclusive.
+
+You don't have to write the fault yourself. Ask your agent:
+
+```text
+Use $playwright-agent: would our tests catch it if free shipping stopped applying
+over ₹5,000? Prove it by execution and leave the app unchanged.
+```
+
+The mutation skill reads the code, writes the find and replace, runs
+`npm run mutate` and reports the verdict.
+
+### Many faults: a reviewed campaign
+
+A campaign runs a reviewed list of requirement-linked faults, each with an
+independent probe that confirms the fault is active, and records the result for
+the report. It needs JavaScript/TypeScript application source.
 
 **7a. Create a config** — copy
 `examples/validation-demo/mutation.config.json` to
@@ -251,6 +329,8 @@ fault points at the missing `$842k` assertion.
 | `Refusing to overwrite existing different …` during step 2 | A shim differs from the generated one (often after a toolkit update). Review it, delete the generated file, and re-run configure. |
 | The agent doesn't know `$playwright-agent` | Restart the coding-agent session after step 2. |
 | `Run was not attached` after a test run | The toolkit dependencies are missing (`npm ci --prefix quality`), or the reporter path in your config is wrong. |
+| Every fault "survives", even obvious ones | Your tests aren't running against the copy: they point at a deployed URL, or reuse a dev server that's already running. See step 7, "Before either". |
+| `mutate` says invalid | The `--find` text must occur exactly once in `--file`. Copy it from the file, including spacing. |
 | Mutation result `not_run` | The baseline was not green twice. Fix flaky or failing tests first. |
 | Mutation result `not_activated` | The probe didn't see the change. Check the probe's `path`, `testId` and `expected`. |
 | PDF/Excel not read | Install the optional Python parsers (step 1). Scanned PDFs need OCR text supplied separately. |
