@@ -5,6 +5,11 @@ updates:
     schedule:
       interval: weekly
     open-pull-requests-limit: 3
+    groups:
+      # init and analyze must always move together, or CodeQL fails.
+      codeql-action:
+        patterns:
+          - "github/codeql-action*"
   - package-ecosystem: npm
     directories:
       - /
