@@ -12,17 +12,21 @@ From the toolkit root:
 ~~~sh
 npm ci
 npm ci --prefix quality
-npm run agent:configure -- --repo "../my-existing-project" --client both
+npm run agent:configure -- --repo "../my-existing-project" --client all
 ~~~
 
 The target must already declare @playwright/test and have an existing config.
 Select another existing file with --playwright-config config/ui.config.ts.
-Clients are codex, copilot or both.
+Clients are codex, copilot, claude, both (codex and copilot) or all.
 
 Codex onboarding adds a router shim and three capability shims:
 playwright-test-authoring, playwright-assessment and playwright-mutation.
 The latter two have explicit-only discovery policies. The router can load them
 when the user clearly requests that work in natural language.
+Claude Code onboarding adds the same four shims under .claude/skills, where Claude
+Code discovers project skills; assessment and mutation are marked
+disable-model-invocation, so they run only when you ask (for example
+/playwright-mutation). Your CLAUDE.md is not changed.
 Copilot onboarding adds one custom-agent entrypoint linking to the same router.
 Each shim explicitly targets the adopter repository, not the toolkit or CRM.
 

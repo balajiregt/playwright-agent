@@ -18,7 +18,7 @@ Steps 6 and 7 are optional and only run when you ask for them.
 | --- | --- |
 | An existing Playwright project | It must declare `@playwright/test` and have a Playwright config. |
 | Node.js 22 or newer | Used by the toolkit. Your project keeps its own Node setup. |
-| A coding agent | Codex or GitHub Copilot (configured in step 2), or another agent that can read the skill files. |
+| A coding agent | Claude Code, Codex or GitHub Copilot (configured in step 2). |
 | Python 3 (optional) | Only to read PDF or Excel requirement documents. |
 
 No API keys, model servers or cloud services are needed. Judgments come from your
@@ -55,14 +55,16 @@ The rest of this guide assumes this layout:
 From the toolkit folder:
 
 ```sh
-npm run agent:configure -- --repo ../my-project --client both
+npm run agent:configure -- --repo ../my-project --client all
 ```
 
-Use `--client codex` or `--client copilot` for just one, and
+`all` sets up Claude Code, Codex and Copilot. Use `--client claude`, `--client codex`
+or `--client copilot` for just one (`both` means Codex and Copilot), and
 `--playwright-config path/to/config.ts` if your config is not
 `playwright.config.ts`.
 
-This adds skill shims (`.agents/skills/…`) and/or a Copilot agent file to your
+This adds skill shims (`.claude/skills/…` for Claude Code, `.agents/skills/…` for
+Codex) and/or a Copilot agent file to your
 project, plus an ignored `.playwright-agent.local.json`. It never installs
 packages, edits tests or overwrites files that differ. **Restart your coding
 agent session** so it discovers the new skills.
