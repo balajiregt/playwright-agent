@@ -50,7 +50,7 @@
     "tools:test": "node --test scripts/mutate.test.mjs scripts/coverage-matrix.test.mjs"
   },
   "devDependencies": {
-    "@playwright/test": "1.65.0",
+    "@playwright/test": "1.65.1",
     "@types/node": "^26.6.6",
     "typescript": "^7.0.2",
     "yaml": "^2.9.1"
